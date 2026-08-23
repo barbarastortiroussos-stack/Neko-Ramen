@@ -31,7 +31,7 @@
     position:relative;
     width:100vw;
     height:100vh;
-    background:url('background.png') center center / cover no-repeat;
+    background:url('assets/background.png') center center / cover no-repeat;
     display:flex;
     flex-direction:column;
     justify-content:flex-end;
@@ -166,13 +166,40 @@
     display:none;
     align-items:center;
     justify-content:center;
-    font-size:2.4em;
+    position:relative;
     background:radial-gradient(circle at 35% 30%, #fff, var(--gold) 60%, var(--gold-dark));
     border:3px solid #fff8e5;
     box-shadow:0 0 18px rgba(255,220,150,.85), 0 6px 12px var(--shadow);
     animation:pop .25s ease-out;
+    overflow:visible;
   }
   .customer.show{ display:flex; }
+
+  .customer-sprite{
+    width:100%;
+    height:100%;
+    border-radius:50%;
+    object-fit:cover;
+    object-position:top center;
+    pointer-events:none;
+  }
+
+  .order-bubble{
+    position:absolute;
+    top:-14px;
+    right:-10px;
+    width:30px;
+    height:30px;
+    border-radius:50%;
+    background:var(--paper);
+    border:2px solid var(--gold-dark);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:1em;
+    box-shadow:0 3px 6px var(--shadow);
+    pointer-events:none;
+  }
 
   @keyframes pop{
     from{ transform:scale(.4); opacity:0; }
@@ -298,9 +325,21 @@
 
   <!-- clientes sobre as mesas -->
   <div id="tables-layer">
-    <div class="table-spot t1"><div class="customer" id="c1"><div class="patience-ring"></div>🍶</div></div>
-    <div class="table-spot t2"><div class="customer" id="c2"><div class="patience-ring"></div>🍜</div></div>
-    <div class="table-spot t3"><div class="customer" id="c3"><div class="patience-ring"></div>🍣</div></div>
+    <div class="table-spot t1"><div class="customer" id="c1">
+      <div class="patience-ring"></div>
+      <img class="customer-sprite" src="assets/customer_cat.png" alt="Cliente">
+      <div class="order-bubble">🍶</div>
+    </div></div>
+    <div class="table-spot t2"><div class="customer" id="c2">
+      <div class="patience-ring"></div>
+      <img class="customer-sprite" src="assets/customer_cat.png" alt="Cliente">
+      <div class="order-bubble">🍜</div>
+    </div></div>
+    <div class="table-spot t3"><div class="customer" id="c3">
+      <div class="patience-ring"></div>
+      <img class="customer-sprite" src="assets/customer_cat.png" alt="Cliente">
+      <div class="order-bubble">🍣</div>
+    </div></div>
   </div>
 
   <div class="toast" id="toast"></div>
@@ -387,6 +426,8 @@
   }
 
   // ---------------- CLIENTES ----------------
+  const ORDERS = ['🍶','🍜','🍣','🍙','🍡','🍢'];
+
   function trySpawnCustomer(){
     const free = tables.filter(t => !t.occupied);
     if (free.length === 0) return;
@@ -396,6 +437,9 @@
     t.occupied = true;
     t.patience = state.patienceTime;
     t.el.classList.add('show');
+
+    const bubble = t.el.querySelector('.order-bubble');
+    if (bubble) bubble.textContent = ORDERS[Math.floor(Math.random() * ORDERS.length)];
   }
 
   function serveCustomer(t){
