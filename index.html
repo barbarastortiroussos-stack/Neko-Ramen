@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Izakaya no Entardecer</title>
+<style>
+  :root{
+    --wood-dark:#2b1a10;
+    --wood:#4a2f1c;
+    --wood-light:#7a4c26;
+    --gold:#e8b64a;
+    --gold-dark:#a97a1f;
+    --paper:#f3e6c9;
+    --shadow:rgba(0,0,0,.55);
+  }
+
+  *{box-sizing:border-box;}
+
+  html,body{
+    margin:0;
+    padding:0;
+    height:100%;
+    background:#000;
+    font-family:'Segoe UI', 'Hiragino Sans', sans-serif;
+    overflow:hidden;
+    user-select:none;
+  }
+
+  #game{
+    position:relative;
+    width:100vw;
+    height:100vh;
+    background:url('assets/background.png') center center / cover no-repeat;
+    display:flex;
+    flex-direction:column;
+    justify-content:flex-end;
+  }
+
+  /* leve vinheta pra dar clima e destacar o HUD */
+  #game::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    pointer-events:none;
+    background:radial-gradient(ellipse at center, rgba(0,0,0,0) 55%, rgba(0,0,0,.55) 100%);
+  }
+
+  /* ---------- HUD SUPERIOR ---------- */
+  #hud-top{
+    position:absolute;
+    top:0; left:0; right:0;
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    padding:16px 20px;
+    z-index:20;
+    pointer-events:none;
+  }
+
+  .hud-pill{
+    pointer-events:auto;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    background:linear-gradient(180deg, var(--wood-light), var(--wood));
+    border:2px solid var(--gold-dark);
+    border-radius:999px;
+    padding:8px 16px;
+    color:var(--paper);
+    font-weight:700;
+    font-size:18px;
+    box-shadow:0 4px 10px var(--shadow), inset 0 1px 0 rgba(255,255,255,.15);
+  }
+
+  .coin-icon{
+    width:24px;height:24px;
+    border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, #fff4c9, var(--gold) 55%, var(--gold-dark) 100%);
+    border:2px solid #7a5613;
+    display:inline-block;
+    box-shadow:0 0 6px rgba(232,182,74,.7);
+  }
+
+  #day-label{
+    font-size:15px;
+    opacity:.9;
+    font-weight:600;
+  }
+
+  #pause-btn{
+    pointer-events:auto;
+    background:linear-gradient(180deg, var(--wood-light), var(--wood));
+    border:2px solid var(--gold-dark);
+    color:var(--paper);
+    width:46px;height:46px;
+    border-radius:12px;
+    font-size:20px;
+    cursor:pointer;
+    box-shadow:0 4px 10px var(--shadow);
+    transition:transform .1s;
+  }
+  #pause-btn:active{ transform:scale(.92); }
+
+  /* ---------- BARRA DE EXPEDIENTE ---------- */
+  #shift-bar-wrap{
+    position:absolute;
+    top:64px;
+    left:50%;
+    transform:translateX(-50%);
+    width:min(480px, 70vw);
+    z-index:20;
+    text-align:center;
+    pointer-events:none;
+  }
+
+  #shift-label{
+    color:var(--paper);
+    font-size:13px;
+    font-weight:700;
+    letter-spacing:.5px;
+    text-shadow:0 2px 4px #000;
+    margin-bottom:4px;
+  }
+
+  #shift-track{
+    height:14px;
+    border-radius:999px;
+    background:rgba(0,0,0,.5);
+    border:1px solid var(--gold-dark);
+    overflow:hidden;
+    box-shadow:inset 0 2px 4px rgba(0,0,0,.6);
+  }
+
+  #shift-fill{
+    height:100%;
+    width:100%;
+    background:linear-gradient(90deg, #ffd479, var(--gold) 60%, var(--gold-dark));
+    transition:width .2s linear;
+  }
+
+  /* ---------- MESAS / CLIENTES ---------- */
+  #tables-layer{
+    position:absolute;
+    inset:0;
+    z-index:10;
+  }
+
+  .table-spot{
+    position:absolute;
+    width:9%;
+    aspect-ratio:1/1;
+    transform:translate(-50%,-50%);
+    cursor:pointer;
+  }
+
+  /* posições aproximadas sobre as 3 mesas da imagem */
+  .table-spot.t1{ left:28%; top:53%; }
+  .table-spot.t2{ left:50%; top:51%; }
+  .table-spot.t3{ left:73%; top:53%; }
+
+  .customer{
+    width:100%;
+    height:100%;
+    border-radius:50%;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    font-size:2.4em;
+    background:radial-gradient(circle at 35% 30%, #fff, var(--gold) 60%, var(--gold-dark));
+    border:3px solid #fff8e5;
+    box-shadow:0 0 18px rgba(255,220,150,.85), 0 6px 12px var(--shadow);
+    animation:pop .25s ease-out;
+  }
+  .customer.show{ display:flex; }
+
+  @keyframes pop{
+    from{ transform:scale(.4); opacity:0; }
+    to{ transform:scale(1); opacity:1; }
+  }
+
+  .patience-ring{
+    position:absolute;
+    inset:-6px;
+    border-radius:50%;
+    border:4px solid rgba(255,255,255,.35);
+    pointer-events:none;
+  }
+
+  .coin-pop{
+    position:absolute;
+    top:-14px;
+    left:50%;
+    transform:translateX(-50%);
+    color:var(--gold);
+    font-weight:800;
+    font-size:16px;
+    text-shadow:0 2px 4px #000;
+    pointer-events:none;
+    animation:rise .8s ease-out forwards;
+  }
+  @keyframes rise{
+    to{ transform:translate(-50%,-40px); opacity:0; }
+  }
+
+  /* ---------- OVERLAYS (pause / fim de dia) ---------- */
+  .overlay{
+    position:absolute;
+    inset:0;
+    background:rgba(10,6,3,.72);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:50;
+  }
+  .overlay.show{ display:flex; }
+
+  .panel{
+    background:linear-gradient(180deg, var(--wood-light), var(--wood-dark));
+    border:3px solid var(--gold-dark);
+    border-radius:16px;
+    padding:32px 36px;
+    text-align:center;
+    color:var(--paper);
+    min-width:280px;
+    box-shadow:0 10px 30px var(--shadow);
+  }
+
+  .panel h2{
+    margin:0 0 12px;
+    color:var(--gold);
+    font-size:24px;
+    letter-spacing:.5px;
+  }
+
+  .panel p{
+    margin:6px 0;
+    font-size:16px;
+  }
+
+  .panel .big-coin{
+    font-size:22px;
+    color:var(--gold);
+    font-weight:800;
+    margin:14px 0;
+  }
+
+  .game-btn{
+    margin-top:16px;
+    background:linear-gradient(180deg, var(--gold), var(--gold-dark));
+    border:none;
+    color:#2b1a10;
+    font-weight:800;
+    font-size:16px;
+    padding:12px 28px;
+    border-radius:10px;
+    cursor:pointer;
+    box-shadow:0 4px 10px var(--shadow);
+  }
+  .game-btn:active{ transform:translateY(1px); }
+
+  .toast{
+    position:absolute;
+    bottom:24px;
+    left:50%;
+    transform:translateX(-50%);
+    background:rgba(20,12,6,.85);
+    border:1px solid var(--gold-dark);
+    color:var(--paper);
+    padding:8px 18px;
+    border-radius:999px;
+    font-size:14px;
+    z-index:30;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .3s;
+  }
+  .toast.show{ opacity:1; }
+</style>
+</head>
+<body>
+
+<div id="game">
+
+  <!-- HUD -->
+  <div id="hud-top">
+    <div class="hud-pill">
+      <span class="coin-icon"></span>
+      <span id="coin-count">0</span>
+    </div>
+    <button id="pause-btn" title="Pausar">⏸</button>
+  </div>
+
+  <div id="shift-bar-wrap">
+    <div id="shift-label">DIA <span id="day-count">1</span> — EXPEDIENTE</div>
+    <div id="shift-track"><div id="shift-fill"></div></div>
+  </div>
+
+  <!-- clientes sobre as mesas -->
+  <div id="tables-layer">
+    <div class="table-spot t1"><div class="customer" id="c1"><div class="patience-ring"></div>🍶</div></div>
+    <div class="table-spot t2"><div class="customer" id="c2"><div class="patience-ring"></div>🍜</div></div>
+    <div class="table-spot t3"><div class="customer" id="c3"><div class="patience-ring"></div>🍣</div></div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <!-- overlay de pause -->
+  <div class="overlay" id="pause-overlay">
+    <div class="panel">
+      <h2>Jogo Pausado</h2>
+      <p>Respire um pouco antes de voltar ao balcão.</p>
+      <button class="game-btn" id="resume-btn">Continuar</button>
+    </div>
+  </div>
+
+  <!-- overlay fim de expediente -->
+  <div class="overlay" id="endday-overlay">
+    <div class="panel">
+      <h2>Fim do Expediente</h2>
+      <p id="endday-summary">Você atendeu os clientes do Dia 1.</p>
+      <div class="big-coin">+<span id="endday-coins">0</span> moedas hoje</div>
+      <button class="game-btn" id="nextday-btn">Começar Dia 2</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  // ---------------- ESTADO ----------------
+  const state = {
+    coins: 0,
+    day: 1,
+    shiftDuration: 60,   // segundos por expediente
+    shiftTimeLeft: 60,
+    paused: false,
+    shiftRunning: true,
+    coinsToday: 0,
+    spawnTimer: 0,
+    spawnInterval: 1.8,  // segundos entre tentativas de spawn
+    patienceTime: 5,     // segundos que o cliente espera antes de ir embora
+  };
+
+  const tables = [
+    { el: document.getElementById('c1'), occupied:false, patience:0 },
+    { el: document.getElementById('c2'), occupied:false, patience:0 },
+    { el: document.getElementById('c3'), occupied:false, patience:0 },
+  ];
+
+  const coinCountEl = document.getElementById('coin-count');
+  const dayCountEl = document.getElementById('day-count');
+  const shiftFillEl = document.getElementById('shift-fill');
+  const pauseBtn = document.getElementById('pause-btn');
+  const pauseOverlay = document.getElementById('pause-overlay');
+  const resumeBtn = document.getElementById('resume-btn');
+  const enddayOverlay = document.getElementById('endday-overlay');
+  const enddaySummary = document.getElementById('endday-summary');
+  const enddayCoins = document.getElementById('endday-coins');
+  const nextdayBtn = document.getElementById('nextday-btn');
+  const toastEl = document.getElementById('toast');
+
+  // ---------------- UI HELPERS ----------------
+  function updateCoinsUI(){
+    coinCountEl.textContent = state.coins;
+  }
+
+  function updateShiftUI(){
+    const pct = Math.max(0, (state.shiftTimeLeft / state.shiftDuration) * 100);
+    shiftFillEl.style.width = pct + '%';
+    dayCountEl.textContent = state.day;
+  }
+
+  function showToast(msg){
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => toastEl.classList.remove('show'), 1200);
+  }
+
+  function spawnCoinPop(tableEl, amount){
+    const pop = document.createElement('div');
+    pop.className = 'coin-pop';
+    pop.textContent = '+' + amount;
+    tableEl.appendChild(pop);
+    setTimeout(() => pop.remove(), 800);
+  }
+
+  // ---------------- CLIENTES ----------------
+  function trySpawnCustomer(){
+    const free = tables.filter(t => !t.occupied);
+    if (free.length === 0) return;
+    if (Math.random() > 0.6) return; // nem toda tentativa spawna, dá ritmo
+
+    const t = free[Math.floor(Math.random() * free.length)];
+    t.occupied = true;
+    t.patience = state.patienceTime;
+    t.el.classList.add('show');
+  }
+
+  function serveCustomer(t){
+    if (!t.occupied) return;
+    const reward = 5 + Math.floor(Math.random() * 6); // 5 a 10 moedas
+    state.coins += reward;
+    state.coinsToday += reward;
+    updateCoinsUI();
+    spawnCoinPop(t.el, reward);
+    t.occupied = false;
+    t.el.classList.remove('show');
+  }
+
+  function customerLeaves(t){
+    t.occupied = false;
+    t.el.classList.remove('show');
+    showToast('Um cliente foi embora sem ser atendido...');
+  }
+
+  tables.forEach((t, i) => {
+    t.el.addEventListener('click', () => serveCustomer(t));
+  });
+
+  // ---------------- PAUSE ----------------
+  function setPaused(v){
+    state.paused = v;
+    pauseOverlay.classList.toggle('show', v);
+    pauseBtn.textContent = v ? '▶' : '⏸';
+  }
+
+  pauseBtn.addEventListener('click', () => setPaused(!state.paused));
+  resumeBtn.addEventListener('click', () => setPaused(false));
+
+  // ---------------- DIA / EXPEDIENTE ----------------
+  function endShift(){
+    state.shiftRunning = false;
+    tables.forEach(t => { t.occupied = false; t.el.classList.remove('show'); });
+    enddaySummary.textContent = `Você atendeu clientes durante o Dia ${state.day}.`;
+    enddayCoins.textContent = state.coinsToday;
+    enddayOverlay.classList.add('show');
+  }
+
+  nextdayBtn.addEventListener('click', () => {
+    state.day += 1;
+    state.coinsToday = 0;
+    state.shiftTimeLeft = state.shiftDuration;
+    state.shiftRunning = true;
+    enddayOverlay.classList.remove('show');
+    updateShiftUI();
+  });
+
+  // ---------------- LOOP PRINCIPAL ----------------
+  let lastTime = performance.now();
+
+  function loop(now){
+    const dt = Math.min(0.1, (now - lastTime) / 1000); // segundos, com teto de segurança
+    lastTime = now;
+
+    if (!state.paused && state.shiftRunning){
+      // tempo de expediente
+      state.shiftTimeLeft -= dt;
+      if (state.shiftTimeLeft <= 0){
+        state.shiftTimeLeft = 0;
+        updateShiftUI();
+        endShift();
+      } else {
+        updateShiftUI();
+      }
+
+      // spawn de clientes
+      state.spawnTimer += dt;
+      if (state.spawnTimer >= state.spawnInterval){
+        state.spawnTimer = 0;
+        trySpawnCustomer();
+      }
+
+      // paciência dos clientes
+      tables.forEach(t => {
+        if (t.occupied){
+          t.patience -= dt;
+          if (t.patience <= 0){
+            customerLeaves(t);
+          }
+        }
+      });
+    }
+
+    requestAnimationFrame(loop);
+  }
+
+  // ---------------- INIT ----------------
+  updateCoinsUI();
+  updateShiftUI();
+  requestAnimationFrame(loop);
+
+})();
+</script>
+
+</body>
+</html>
