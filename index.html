@@ -21,7 +21,8 @@
     margin:0;
     padding:0;
     height:100%;
-    background:#000;
+    /* fundo de segurança: se a imagem principal falhar, isso aparece em vez de preto puro */
+    background:linear-gradient(160deg, #3a2415, #1f130b);
     font-family:'Segoe UI', 'Hiragino Sans', sans-serif;
     overflow:hidden;
     user-select:none;
@@ -31,7 +32,10 @@
     position:relative;
     width:100vw;
     height:100vh;
-    background:url('assets/background.png') center center / cover no-repeat;
+    /* camada 1: imagem do cenário / camada 2: gradiente de segurança (aparece se a imagem 404) */
+    background:
+      url('assets/background.png') center center / cover no-repeat,
+      linear-gradient(160deg, #3a2415, #1f130b);
     display:flex;
     flex-direction:column;
     justify-content:flex-end;
@@ -80,12 +84,6 @@
     border:2px solid #7a5613;
     display:inline-block;
     box-shadow:0 0 6px rgba(232,182,74,.7);
-  }
-
-  #day-label{
-    font-size:15px;
-    opacity:.9;
-    font-weight:600;
   }
 
   #pause-btn{
@@ -183,6 +181,15 @@
     object-position:top center;
     pointer-events:none;
   }
+
+  /* aparece se a imagem do sprite falhar ao carregar, pra mesa nunca ficar vazia */
+  .customer-fallback-emoji{
+    display:none;
+    font-size:2em;
+    pointer-events:none;
+  }
+  .customer.sprite-failed .customer-sprite{ display:none; }
+  .customer.sprite-failed .customer-fallback-emoji{ display:block; }
 
   .order-bubble{
     position:absolute;
@@ -303,6 +310,27 @@
     transition:opacity .3s;
   }
   .toast.show{ opacity:1; }
+
+  /* ---------- PAINEL DE DIAGNÓSTICO (ajuda a achar bugs, nunca deixa a tela "sumir" em silêncio) ---------- */
+  #debug-panel{
+    position:fixed;
+    left:10px;
+    bottom:10px;
+    max-width:min(92vw, 480px);
+    max-height:40vh;
+    overflow:auto;
+    background:rgba(20,4,4,.92);
+    border:2px solid #ff6b6b;
+    color:#ffe2e2;
+    font:12px/1.5 monospace;
+    padding:10px 12px;
+    border-radius:8px;
+    z-index:9999;
+    display:none;
+    white-space:pre-wrap;
+  }
+  #debug-panel.show{ display:block; }
+  #debug-panel strong{ color:#ff9d9d; }
 </style>
 </head>
 <body>
@@ -327,17 +355,20 @@
   <div id="tables-layer">
     <div class="table-spot t1"><div class="customer" id="c1">
       <div class="patience-ring"></div>
-      <img class="customer-sprite" src="assets/customer_cat.png" alt="Cliente">
+      <img class="customer-sprite" alt="Cliente">
+      <span class="customer-fallback-emoji">🐾</span>
       <div class="order-bubble">🍶</div>
     </div></div>
     <div class="table-spot t2"><div class="customer" id="c2">
       <div class="patience-ring"></div>
-      <img class="customer-sprite" src="assets/customer_cat.png" alt="Cliente">
+      <img class="customer-sprite" alt="Cliente">
+      <span class="customer-fallback-emoji">🐾</span>
       <div class="order-bubble">🍜</div>
     </div></div>
     <div class="table-spot t3"><div class="customer" id="c3">
       <div class="patience-ring"></div>
-      <img class="customer-sprite" src="assets/customer_cat.png" alt="Cliente">
+      <img class="customer-sprite" alt="Cliente">
+      <span class="customer-fallback-emoji">🐾</span>
       <div class="order-bubble">🍣</div>
     </div></div>
   </div>
@@ -365,8 +396,68 @@
 
 </div>
 
+<!-- painel de diagnóstico: só aparece se algo der errado (imagem 404 ou erro de JS) -->
+<div id="debug-panel"></div>
+
 <script>
+/* =========================================================================
+   PAINEL DE DIAGNÓSTICO
+   Em vez de deixar a tela "travada" ou "preta" sem explicação, qualquer
+   erro de JavaScript ou imagem que falhe ao carregar aparece aqui.
+   Pode remover este bloco inteiro quando o jogo estiver estável.
+   ========================================================================= */
+const DebugPanel = (function(){
+  const panel = document.getElementById('debug-panel');
+  const lines = [];
+
+  function render(){
+    panel.innerHTML = lines.map(l => `<div>${l}</div>`).join('');
+    panel.classList.add('show');
+  }
+
+  return {
+    log(msg){
+      lines.push(msg);
+      render();
+    }
+  };
+})();
+
+window.addEventListener('error', function(e){
+  DebugPanel.log(`<strong>Erro de JS:</strong> ${e.message} (linha ${e.lineno})`);
+});
+
+/* =========================================================================
+   ASSETS
+   Caminhos centralizados aqui. Se algum arquivo não carregar (nome errado,
+   maiúscula/minúscula diferente, pasta errada no GitHub Pages etc.), o
+   painel de diagnóstico avisa exatamente qual caminho falhou.
+   ========================================================================= */
+const ASSETS = {
+  background: 'assets/background.png',
+  customerSprites: [
+    'assets/customer_cat.png',
+    'assets/customer_panda.png',
+  ],
+};
+
+function checkImage(path){
+  const img = new Image();
+  img.onerror = () => DebugPanel.log(
+    `<strong>Imagem não encontrada:</strong> "${path}" — confira maiúsculas/minúsculas, ` +
+    `espaços no nome e se o arquivo está mesmo nessa pasta no repositório.`
+  );
+  img.src = path;
+}
+checkImage(ASSETS.background);
+ASSETS.customerSprites.forEach(checkImage);
+
+/* =========================================================================
+   JOGO
+   ========================================================================= */
 (function(){
+  try{
+
   // ---------------- ESTADO ----------------
   const state = {
     coins: 0,
@@ -381,11 +472,18 @@
     patienceTime: 5,     // segundos que o cliente espera antes de ir embora
   };
 
-  const tables = [
-    { el: document.getElementById('c1'), occupied:false, patience:0 },
-    { el: document.getElementById('c2'), occupied:false, patience:0 },
-    { el: document.getElementById('c3'), occupied:false, patience:0 },
-  ];
+  const ORDERS = ['🍶','🍜','🍣','🍙','🍡','🍢'];
+
+  const tables = ['c1','c2','c3'].map(id => {
+    const el = document.getElementById(id);
+    return {
+      el,
+      img: el.querySelector('.customer-sprite'),
+      bubble: el.querySelector('.order-bubble'),
+      occupied: false,
+      patience: 0,
+    };
+  });
 
   const coinCountEl = document.getElementById('coin-count');
   const dayCountEl = document.getElementById('day-count');
@@ -410,11 +508,12 @@
     dayCountEl.textContent = state.day;
   }
 
+  let toastTimer = null;
   function showToast(msg){
     toastEl.textContent = msg;
     toastEl.classList.add('show');
-    clearTimeout(showToast._t);
-    showToast._t = setTimeout(() => toastEl.classList.remove('show'), 1200);
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.remove('show'), 1200);
   }
 
   function spawnCoinPop(tableEl, amount){
@@ -426,8 +525,6 @@
   }
 
   // ---------------- CLIENTES ----------------
-  const ORDERS = ['🍶','🍜','🍣','🍙','🍡','🍢'];
-
   function trySpawnCustomer(){
     const free = tables.filter(t => !t.occupied);
     if (free.length === 0) return;
@@ -436,10 +533,13 @@
     const t = free[Math.floor(Math.random() * free.length)];
     t.occupied = true;
     t.patience = state.patienceTime;
-    t.el.classList.add('show');
 
-    const bubble = t.el.querySelector('.order-bubble');
-    if (bubble) bubble.textContent = ORDERS[Math.floor(Math.random() * ORDERS.length)];
+    // sorteia qual bichinho aparece (gato ou panda) e qual pedido ele quer
+    const sprite = ASSETS.customerSprites[Math.floor(Math.random() * ASSETS.customerSprites.length)];
+    t.img.src = sprite;
+    t.el.classList.remove('sprite-failed');
+    t.bubble.textContent = ORDERS[Math.floor(Math.random() * ORDERS.length)];
+    t.el.classList.add('show');
   }
 
   function serveCustomer(t){
@@ -459,8 +559,10 @@
     showToast('Um cliente foi embora sem ser atendido...');
   }
 
-  tables.forEach((t, i) => {
+  tables.forEach(t => {
     t.el.addEventListener('click', () => serveCustomer(t));
+    // se o sprite sorteado não carregar, mostra um emoji de reserva em vez de deixar a mesa vazia
+    t.img.addEventListener('error', () => t.el.classList.add('sprite-failed'));
   });
 
   // ---------------- PAUSE ----------------
@@ -472,6 +574,13 @@
 
   pauseBtn.addEventListener('click', () => setPaused(!state.paused));
   resumeBtn.addEventListener('click', () => setPaused(false));
+
+  document.addEventListener('keydown', (e) => {
+    if (e.code === 'Space' || e.key.toLowerCase() === 'p'){
+      e.preventDefault();
+      if (state.shiftRunning) setPaused(!state.paused);
+    }
+  });
 
   // ---------------- DIA / EXPEDIENTE ----------------
   function endShift(){
@@ -494,37 +603,44 @@
   // ---------------- LOOP PRINCIPAL ----------------
   let lastTime = performance.now();
 
+  function tick(dt){
+    // tempo de expediente
+    state.shiftTimeLeft -= dt;
+    if (state.shiftTimeLeft <= 0){
+      state.shiftTimeLeft = 0;
+      updateShiftUI();
+      endShift();
+      return;
+    }
+    updateShiftUI();
+
+    // spawn de clientes
+    state.spawnTimer += dt;
+    if (state.spawnTimer >= state.spawnInterval){
+      state.spawnTimer = 0;
+      trySpawnCustomer();
+    }
+
+    // paciência dos clientes
+    tables.forEach(t => {
+      if (t.occupied){
+        t.patience -= dt;
+        if (t.patience <= 0) customerLeaves(t);
+      }
+    });
+  }
+
   function loop(now){
     const dt = Math.min(0.1, (now - lastTime) / 1000); // segundos, com teto de segurança
     lastTime = now;
 
     if (!state.paused && state.shiftRunning){
-      // tempo de expediente
-      state.shiftTimeLeft -= dt;
-      if (state.shiftTimeLeft <= 0){
-        state.shiftTimeLeft = 0;
-        updateShiftUI();
-        endShift();
-      } else {
-        updateShiftUI();
+      try{
+        tick(dt);
+      } catch(err){
+        // um erro dentro do tick não deve travar o jogo pra sempre: registra e segue o loop
+        DebugPanel.log(`<strong>Erro no loop:</strong> ${err.message}`);
       }
-
-      // spawn de clientes
-      state.spawnTimer += dt;
-      if (state.spawnTimer >= state.spawnInterval){
-        state.spawnTimer = 0;
-        trySpawnCustomer();
-      }
-
-      // paciência dos clientes
-      tables.forEach(t => {
-        if (t.occupied){
-          t.patience -= dt;
-          if (t.patience <= 0){
-            customerLeaves(t);
-          }
-        }
-      });
     }
 
     requestAnimationFrame(loop);
@@ -535,6 +651,9 @@
   updateShiftUI();
   requestAnimationFrame(loop);
 
+  } catch(err){
+    DebugPanel.log(`<strong>Erro de inicialização:</strong> ${err.message}`);
+  }
 })();
 </script>
 
