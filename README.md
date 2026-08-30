@@ -34,4 +34,4 @@ Como o jogo roda direto no navegador, você pode testá-lo online via [GitHub Pa
 Criado com foco em design minimalista, estética aconchegante e código limpo, explorando o desenvolvimento de jogos voltados para plataformas web (Game Distribution / Y8).
 
 ---
-*Desenvolvido com 💜 por Barbara.*
+*Desenvolvido com 💜 por Bunny/Barbara.*
