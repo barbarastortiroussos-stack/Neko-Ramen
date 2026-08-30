@@ -6,14 +6,16 @@
 <title>Izakaya no Entardecer</title>
 <style>
   :root{
-    --wood-dark:#2b1a10;
-    --wood:#4a2f1c;
-    --wood-light:#7a4c26;
-    --gold:#e8b64a;
-    --gold-dark:#a97a1f;
-    --paper:#f3e6c9;
-    --shadow:rgba(0,0,0,.55);
-    --green:#6fae5c;
+    --ink-dark:#140f1c;
+    --ink:#241a30;
+    --ink-light:#3a2a4a;
+    --plum:#5c2a45;
+    --gold:#d3b678;
+    --gold-dark:#8a6f3a;
+    --rose:#e3a9c0;
+    --paper:#efe6f0;
+    --jade:#6fae5c;
+    --shadow:rgba(10,4,14,.65);
   }
 
   *{box-sizing:border-box;}
@@ -22,10 +24,23 @@
     margin:0;
     padding:0;
     height:100%;
-    background:linear-gradient(160deg, #3a2415, #1f130b);
+    background:linear-gradient(160deg, #241a30, #0f0a16);
     font-family:'Segoe UI', 'Hiragino Sans', sans-serif;
     overflow:hidden;
     user-select:none;
+  }
+
+  .serif-title{
+    font-family:'Times New Roman', 'Yu Mincho', serif;
+    letter-spacing:1px;
+  }
+  .serif-title::before, .serif-title::after{
+    content:"✦";
+    color:var(--rose);
+    font-size:.65em;
+    margin:0 10px;
+    vertical-align:middle;
+    opacity:.85;
   }
 
   #game{
@@ -34,7 +49,7 @@
     height:100vh;
     background:
       url('background.png') center center / cover no-repeat,
-      linear-gradient(160deg, #3a2415, #1f130b);
+      linear-gradient(160deg, #241a30, #0f0a16);
     display:flex;
     flex-direction:column;
     justify-content:flex-end;
@@ -45,7 +60,7 @@
     position:absolute;
     inset:0;
     pointer-events:none;
-    background:radial-gradient(ellipse at center, rgba(0,0,0,0) 55%, rgba(0,0,0,.55) 100%);
+    background:radial-gradient(ellipse at center, rgba(20,10,25,0) 52%, rgba(10,4,14,.68) 100%);
   }
 
   /* ---------- HUD SUPERIOR ---------- */
@@ -72,29 +87,29 @@
     display:flex;
     align-items:center;
     gap:8px;
-    background:linear-gradient(180deg, var(--wood-light), var(--wood));
-    border:2px solid var(--gold-dark);
+    background:linear-gradient(180deg, var(--ink-light), var(--ink));
+    border:1.5px solid var(--gold-dark);
     border-radius:999px;
     padding:8px 16px;
     color:var(--paper);
     font-weight:700;
     font-size:18px;
-    box-shadow:0 4px 10px var(--shadow), inset 0 1px 0 rgba(255,255,255,.15);
+    box-shadow:0 4px 10px var(--shadow), inset 0 1px 0 rgba(255,255,255,.08);
   }
 
   .coin-icon{
     width:24px;height:24px;
     border-radius:50%;
-    background:radial-gradient(circle at 35% 30%, #fff4c9, var(--gold) 55%, var(--gold-dark) 100%);
-    border:2px solid #7a5613;
+    background:radial-gradient(circle at 35% 30%, #fff6e0, var(--gold) 55%, var(--gold-dark) 100%);
+    border:2px solid var(--gold-dark);
     display:inline-block;
-    box-shadow:0 0 6px rgba(232,182,74,.7);
+    box-shadow:0 0 6px rgba(211,182,120,.7);
   }
 
   .icon-btn{
     pointer-events:auto;
-    background:linear-gradient(180deg, var(--wood-light), var(--wood));
-    border:2px solid var(--gold-dark);
+    background:linear-gradient(180deg, var(--ink-light), var(--ink));
+    border:1.5px solid var(--gold-dark);
     color:var(--paper);
     width:46px;height:46px;
     border-radius:12px;
@@ -138,7 +153,7 @@
   #shift-fill{
     height:100%;
     width:100%;
-    background:linear-gradient(90deg, #ffd479, var(--gold) 60%, var(--gold-dark));
+    background:linear-gradient(90deg, var(--rose), var(--gold) 60%, var(--gold-dark));
     transition:width .2s linear;
   }
 
@@ -169,18 +184,17 @@
     align-items:center;
     justify-content:center;
     position:relative;
-    background:radial-gradient(circle at 35% 30%, #fff, var(--gold) 60%, var(--gold-dark));
-    border:3px solid #fff8e5;
-    box-shadow:0 0 18px rgba(255,220,150,.85), 0 6px 12px var(--shadow);
+    background:radial-gradient(circle at 35% 30%, #fff, var(--rose) 55%, var(--plum) 100%);
+    border:3px solid #f2e6d8;
+    box-shadow:0 0 18px rgba(227,169,192,.75), 0 6px 12px var(--shadow);
     animation:pop .25s ease-out;
     overflow:visible;
     transition:box-shadow .2s;
   }
   .customer.show{ display:flex; }
 
-  /* destaque quando o prato na mão do jogador combina com o pedido dessa mesa */
   .customer.match-highlight{
-    box-shadow:0 0 0 6px rgba(111,174,92,.55), 0 0 18px rgba(255,220,150,.85), 0 6px 12px var(--shadow);
+    box-shadow:0 0 0 6px rgba(111,174,92,.55), 0 0 18px rgba(227,169,192,.75), 0 6px 12px var(--shadow);
   }
 
   .customer-sprite{
@@ -222,11 +236,14 @@
     to{ transform:scale(1); opacity:1; }
   }
 
+  /* anel de paciência real: esvazia devagar conforme --pct diminui via JS */
   .patience-ring{
     position:absolute;
-    inset:-6px;
+    inset:-7px;
     border-radius:50%;
-    border:4px solid rgba(255,255,255,.35);
+    background:conic-gradient(var(--rose) var(--pct, 100%), rgba(255,255,255,.12) 0);
+    -webkit-mask:radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 4px));
+            mask:radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 4px));
     pointer-events:none;
   }
 
@@ -242,12 +259,12 @@
     pointer-events:none;
     animation:rise .8s ease-out forwards;
   }
-  .coin-pop.miss{ color:#e2e2e2; }
+  .coin-pop.miss{ color:#d8cfe0; }
   @keyframes rise{
     to{ transform:translate(-50%,-40px); opacity:0; }
   }
 
-  /* ---------- COZINHA ---------- */
+  /* ---------- DESPENSA (estoque de pratos prontos) ---------- */
   #kitchen-bar{
     position:absolute;
     bottom:16px;
@@ -257,8 +274,8 @@
     display:flex;
     align-items:center;
     gap:10px;
-    background:linear-gradient(180deg, var(--wood-light), var(--wood-dark));
-    border:2px solid var(--gold-dark);
+    background:linear-gradient(180deg, var(--ink-light), var(--ink-dark));
+    border:1.5px solid var(--gold-dark);
     border-radius:18px;
     padding:10px 14px;
     box-shadow:0 6px 18px var(--shadow);
@@ -273,19 +290,20 @@
     align-items:center;
     justify-content:center;
     font-size:1.6em;
-    background:rgba(0,0,0,.25);
+    background:rgba(0,0,0,.3);
     flex-shrink:0;
+    color:var(--paper);
   }
   #carrying-slot.filled{
     border-style:solid;
-    background:radial-gradient(circle at 35% 30%, #fff4c9, var(--gold) 60%, var(--gold-dark));
+    background:radial-gradient(circle at 35% 30%, #fff6e0, var(--gold) 60%, var(--gold-dark));
     animation:pop .2s ease-out;
   }
 
   #kitchen-divider{
     width:2px;
     align-self:stretch;
-    background:rgba(255,255,255,.15);
+    background:rgba(255,255,255,.12);
     margin:2px 0;
   }
 
@@ -300,29 +318,38 @@
     height:52px;
     border-radius:12px;
     border:2px solid var(--gold-dark);
-    background:linear-gradient(180deg, #fff4c9, var(--gold));
+    background:linear-gradient(180deg, #f0dfa0, var(--gold));
     font-size:1.5em;
     cursor:pointer;
-    overflow:hidden;
     box-shadow:0 3px 8px var(--shadow);
   }
   .recipe-btn:active{ transform:scale(.94); }
-  .recipe-btn:disabled{ cursor:not-allowed; opacity:.85; }
+  .recipe-btn:disabled{ cursor:not-allowed; opacity:.45; filter:grayscale(.4); }
 
-  .recipe-btn .cook-fill{
+  .stock-badge{
     position:absolute;
-    left:0; right:0; bottom:0;
-    height:0%;
-    background:rgba(43,26,16,.55);
-    transition:height linear;
-    pointer-events:none;
+    bottom:-6px;
+    right:-6px;
+    min-width:18px;
+    height:18px;
+    padding:0 4px;
+    border-radius:999px;
+    background:var(--ink-dark);
+    border:1.5px solid var(--gold-dark);
+    color:var(--paper);
+    font-size:10px;
+    font-weight:800;
+    display:flex;
+    align-items:center;
+    justify-content:center;
   }
+  .stock-badge.low{ background:var(--plum); border-color:var(--rose); color:#fff; }
 
-  /* ---------- OVERLAYS (pause / fim de dia / loja) ---------- */
+  /* ---------- OVERLAYS ---------- */
   .overlay{
     position:absolute;
     inset:0;
-    background:rgba(10,6,3,.72);
+    background:rgba(6,3,10,.78);
     display:none;
     align-items:center;
     justify-content:center;
@@ -331,21 +358,20 @@
   .overlay.show{ display:flex; }
 
   .panel{
-    background:linear-gradient(180deg, var(--wood-light), var(--wood-dark));
-    border:3px solid var(--gold-dark);
+    background:linear-gradient(180deg, var(--ink-light), var(--ink-dark));
+    border:1.5px solid var(--gold-dark);
     border-radius:16px;
     padding:32px 36px;
     text-align:center;
     color:var(--paper);
     min-width:280px;
-    box-shadow:0 10px 30px var(--shadow);
+    box-shadow:0 10px 30px var(--shadow), inset 0 0 40px rgba(92,42,69,.25);
   }
 
   .panel h2{
     margin:0 0 12px;
     color:var(--gold);
-    font-size:24px;
-    letter-spacing:.5px;
+    font-size:23px;
   }
 
   .panel p{
@@ -364,7 +390,7 @@
     margin-top:16px;
     background:linear-gradient(180deg, var(--gold), var(--gold-dark));
     border:none;
-    color:#2b1a10;
+    color:var(--ink-dark);
     font-weight:800;
     font-size:16px;
     padding:12px 28px;
@@ -377,16 +403,28 @@
   /* ---------- LOJA ---------- */
   #shop-panel{
     position:relative;
-    background:linear-gradient(180deg, var(--wood-light), var(--wood-dark));
-    border:3px solid var(--gold-dark);
+    background:linear-gradient(180deg, var(--ink-light), var(--ink-dark));
+    border:1.5px solid var(--gold-dark);
     border-radius:16px;
     padding:24px 26px;
     color:var(--paper);
     width:min(420px, 90vw);
     max-height:80vh;
     overflow-y:auto;
-    box-shadow:0 10px 30px var(--shadow);
+    box-shadow:0 10px 30px var(--shadow), inset 0 0 40px rgba(92,42,69,.25);
   }
+  #shop-panel h2{
+    margin:0 0 4px;
+    color:var(--gold);
+    text-align:center;
+  }
+  #shop-panel .shop-sub{
+    text-align:center;
+    font-size:13px;
+    opacity:.8;
+    margin-bottom:16px;
+  }
+
   #shop-close-x{
     position:absolute;
     top:10px;
@@ -394,7 +432,7 @@
     width:32px;
     height:32px;
     border-radius:50%;
-    border:2px solid var(--gold-dark);
+    border:1.5px solid var(--gold-dark);
     background:rgba(0,0,0,.35);
     color:var(--paper);
     font-size:16px;
@@ -405,23 +443,12 @@
     justify-content:center;
   }
   #shop-close-x:active{ transform:scale(.92); }
-  #shop-panel h2{
-    margin:0 0 4px;
-    color:var(--gold);
-    text-align:center;
-  }
-  #shop-panel .shop-sub{
-    text-align:center;
-    font-size:13px;
-    opacity:.85;
-    margin-bottom:16px;
-  }
 
   .shop-item{
     display:flex;
     align-items:center;
     gap:12px;
-    background:rgba(0,0,0,.25);
+    background:rgba(0,0,0,.28);
     border:1px solid var(--gold-dark);
     border-radius:12px;
     padding:10px 12px;
@@ -430,7 +457,7 @@
   .shop-item .shop-icon{
     width:42px;height:42px;
     border-radius:10px;
-    background:linear-gradient(180deg, #fff4c9, var(--gold));
+    background:linear-gradient(180deg, #f0dfa0, var(--gold));
     display:flex;
     align-items:center;
     justify-content:center;
@@ -447,12 +474,12 @@
   }
   .shop-item .shop-info .shop-desc{
     font-size:12px;
-    opacity:.8;
+    opacity:.75;
   }
   .shop-buy-btn{
     background:linear-gradient(180deg, var(--gold), var(--gold-dark));
     border:none;
-    color:#2b1a10;
+    color:var(--ink-dark);
     font-weight:800;
     font-size:13px;
     padding:8px 12px;
@@ -462,9 +489,14 @@
     white-space:nowrap;
   }
   .shop-buy-btn:disabled{
-    background:#555;
-    color:#aaa;
+    background:#4a4453;
+    color:#a79db3;
     cursor:not-allowed;
+  }
+  .shop-buy-btn.secondary{
+    background:linear-gradient(180deg, var(--ink-light), var(--ink));
+    color:var(--paper);
+    border:1px solid var(--gold-dark);
   }
 
   #shop-close-btn{
@@ -477,7 +509,7 @@
     bottom:90px;
     left:50%;
     transform:translateX(-50%);
-    background:rgba(20,12,6,.85);
+    background:rgba(20,10,20,.9);
     border:1px solid var(--gold-dark);
     color:var(--paper);
     padding:8px 18px;
@@ -558,7 +590,7 @@
 
   <div class="toast" id="toast"></div>
 
-  <!-- cozinha: prepara o prato e depois entrega na mesa -->
+  <!-- despensa: pegue um item do estoque e entregue na mesa certa -->
   <div id="kitchen-bar">
     <div id="carrying-slot" title="Prato na mão">—</div>
     <div id="kitchen-divider"></div>
@@ -568,7 +600,7 @@
   <!-- overlay de pause -->
   <div class="overlay" id="pause-overlay">
     <div class="panel">
-      <h2>Jogo Pausado</h2>
+      <h2 class="serif-title">Jogo Pausado</h2>
       <p>Respire um pouco antes de voltar ao balcão.</p>
       <button class="game-btn" id="resume-btn">Continuar</button>
     </div>
@@ -577,7 +609,7 @@
   <!-- overlay fim de expediente -->
   <div class="overlay" id="endday-overlay">
     <div class="panel">
-      <h2>Fim do Expediente</h2>
+      <h2 class="serif-title">Fim do Expediente</h2>
       <p id="endday-summary">Você atendeu os clientes do Dia 1.</p>
       <div class="big-coin">+<span id="endday-coins">0</span> moedas hoje</div>
       <button class="game-btn" id="nextday-btn">Começar Dia 2</button>
@@ -588,8 +620,8 @@
   <div class="overlay" id="shop-overlay">
     <div id="shop-panel">
       <button id="shop-close-x" title="Fechar">✕</button>
-      <h2>Lojinha do Izakaya</h2>
-      <div class="shop-sub">Compre novas receitas e melhorias com suas moedas</div>
+      <h2 class="serif-title">Lojinha do Izakaya</h2>
+      <div class="shop-sub">Desbloqueie receitas e reponha o estoque</div>
       <div id="shop-list"></div>
       <button class="game-btn" id="shop-close-btn">Fechar</button>
     </div>
@@ -641,23 +673,26 @@ ASSETS.customerSprites.forEach(checkImage);
 
 /* =========================================================================
    RECEITAS E LOJA
-   - "unlocked: true" = já disponível na cozinha desde o início
+   - "unlocked": já disponível na despensa desde o início
+   - "stock": quantidade pronta pra entregar agora (cai a cada item pego)
+   - "restockPrice": custo do pacote de reposição (sempre +STOCK_PACK_SIZE)
    - "reward": intervalo de moedas ganho ao entregar corretamente
-   - "cookTime": segundos para preparar
    ========================================================================= */
+const STOCK_PACK_SIZE = 10;
+
 const RECIPES = [
-  { id:'sake',     name:'Sakê',     emoji:'🍶', price:0,   cookTime:0.6, reward:[5,9],   unlocked:true  },
-  { id:'ramen',    name:'Ramen',    emoji:'🍜', price:0,   cookTime:1.0, reward:[8,13],  unlocked:true  },
-  { id:'onigiri',  name:'Onigiri',  emoji:'🍙', price:30,  cookTime:0.8, reward:[10,16], unlocked:false },
-  { id:'sushi',    name:'Sushi',    emoji:'🍣', price:60,  cookTime:1.4, reward:[14,22], unlocked:false },
-  { id:'dango',    name:'Dango',    emoji:'🍡', price:90,  cookTime:1.1, reward:[17,26], unlocked:false },
-  { id:'yakitori', name:'Yakitori', emoji:'🍢', price:130, cookTime:1.6, reward:[22,34], unlocked:false },
+  { id:'sake',     name:'Sakê',     emoji:'🍶', price:0,   restockPrice:12, reward:[5,9],   unlocked:true,  stock:10 },
+  { id:'ramen',    name:'Ramen',    emoji:'🍜', price:0,   restockPrice:18, reward:[8,13],  unlocked:true,  stock:10 },
+  { id:'onigiri',  name:'Onigiri',  emoji:'🍙', price:30,  restockPrice:22, reward:[10,16], unlocked:false, stock:0  },
+  { id:'sushi',    name:'Sushi',    emoji:'🍣', price:60,  restockPrice:35, reward:[14,22], unlocked:false, stock:0  },
+  { id:'dango',    name:'Dango',    emoji:'🍡', price:90,  restockPrice:45, reward:[17,26], unlocked:false, stock:0  },
+  { id:'yakitori', name:'Yakitori', emoji:'🍢', price:130, restockPrice:60, reward:[22,34], unlocked:false, stock:0  },
 ];
 
 const UPGRADES = [
   { id:'patience1', name:'Sino da Paciência', emoji:'🔔', price:50,
-    desc:'+3s de paciência dos clientes', unlocked:false,
-    apply(state){ state.patienceTime += 3; } },
+    desc:'Clientes esperam mais tempo', unlocked:false,
+    apply(state){ state.patienceTime += 4; } },
   { id:'spawn1', name:'Fama do Izakaya', emoji:'🎏', price:80,
     desc:'Clientes chegam com mais frequência', unlocked:false,
     apply(state){ state.spawnInterval = Math.max(0.7, state.spawnInterval - 0.5); } },
@@ -683,15 +718,15 @@ function recipeById(id){ return RECIPES.find(r => r.id === id); }
     coinsToday: 0,
     spawnTimer: 0,
     spawnInterval: 1.8,
-    patienceTime: 6,
-    carrying: null,   // id da receita que o jogador está segurando pronta
-    cooking: false,   // true enquanto uma receita está sendo preparada
+    patienceTime: 10,   // paciência base, em segundos (mais alta = cai mais devagar)
+    carrying: null,     // id da receita que o jogador está segurando pronta
   };
 
   const tables = ['c1','c2','c3'].map(id => {
     const el = document.getElementById(id);
     return {
       el,
+      ring: el.querySelector('.patience-ring'),
       img: el.querySelector('.customer-sprite'),
       bubble: el.querySelector('.order-bubble'),
       occupied: false,
@@ -752,7 +787,7 @@ function recipeById(id){ return RECIPES.find(r => r.id === id); }
     });
   }
 
-  // ---------------- COZINHA (preparar pratos) ----------------
+  // ---------------- DESPENSA (pegar do estoque) ----------------
   function unlockedRecipes(){ return RECIPES.filter(r => r.unlocked); }
 
   function renderRecipeTray(){
@@ -761,9 +796,22 @@ function recipeById(id){ return RECIPES.find(r => r.id === id); }
       const btn = document.createElement('button');
       btn.className = 'recipe-btn';
       btn.title = r.name;
-      btn.innerHTML = `${r.emoji}<div class="cook-fill"></div>`;
-      btn.addEventListener('click', () => startCooking(r.id));
+      btn.dataset.recipeId = r.id;
+      btn.innerHTML = `${r.emoji}<span class="stock-badge">${r.stock}</span>`;
+      btn.addEventListener('click', () => pickFromStock(r.id));
       recipeTray.appendChild(btn);
+    });
+    refreshTrayStock();
+  }
+
+  function refreshTrayStock(){
+    [...recipeTray.children].forEach(btn => {
+      const r = recipeById(btn.dataset.recipeId);
+      if (!r) return;
+      const badge = btn.querySelector('.stock-badge');
+      badge.textContent = r.stock;
+      badge.classList.toggle('low', r.stock <= 2 && r.stock > 0);
+      btn.disabled = r.stock <= 0;
     });
   }
 
@@ -779,41 +827,20 @@ function recipeById(id){ return RECIPES.find(r => r.id === id); }
     refreshTableHighlights();
   }
 
-  function startCooking(recipeId){
-    if (state.cooking){
-      showToast('Espere o prato atual ficar pronto!');
-      return;
-    }
+  function pickFromStock(recipeId){
     if (state.carrying){
-      showToast('Entregue o prato que já está pronto antes de cozinhar outro.');
+      showToast('Entregue o prato que já está na mão antes de pegar outro.');
       return;
     }
     const recipe = recipeById(recipeId);
-    if (!recipe) return;
-
-    state.cooking = true;
-    const btn = [...recipeTray.children][unlockedRecipes().findIndex(r => r.id === recipeId)];
-    const fill = btn ? btn.querySelector('.cook-fill') : null;
-    if (btn) btn.disabled = true;
-
-    const start = performance.now();
-    const durationMs = recipe.cookTime * 1000;
-
-    function animate(now){
-      const elapsed = now - start;
-      const pct = Math.min(100, (elapsed / durationMs) * 100);
-      if (fill) fill.style.height = pct + '%';
-      if (elapsed < durationMs){
-        requestAnimationFrame(animate);
-      } else {
-        state.cooking = false;
-        state.carrying = recipe.id;
-        if (btn) btn.disabled = false;
-        if (fill) fill.style.height = '0%';
-        updateCarryingUI();
-      }
+    if (!recipe || recipe.stock <= 0){
+      showToast('Estoque zerado! Reponha na lojinha 🏮.');
+      return;
     }
-    requestAnimationFrame(animate);
+    recipe.stock -= 1;
+    state.carrying = recipe.id;
+    refreshTrayStock();
+    updateCarryingUI();
   }
 
   // ---------------- CLIENTES ----------------
@@ -832,6 +859,7 @@ function recipeById(id){ return RECIPES.find(r => r.id === id); }
     t.patience = state.patienceTime;
     t.orderId = recipe.id;
     t.bubble.textContent = recipe.emoji;
+    t.ring.style.setProperty('--pct', '100%');
 
     const sprite = ASSETS.customerSprites[Math.floor(Math.random() * ASSETS.customerSprites.length)];
     t.img.src = sprite;
@@ -847,7 +875,7 @@ function recipeById(id){ return RECIPES.find(r => r.id === id); }
       return;
     }
     if (!state.carrying){
-      showToast('Prepare um prato na cozinha antes de atender!');
+      showToast('Pegue um prato na despensa antes de atender!');
       return;
     }
 
@@ -858,7 +886,7 @@ function recipeById(id){ return RECIPES.find(r => r.id === id); }
       const [min, max] = recipe.reward;
       reward = min + Math.floor(Math.random() * (max - min + 1));
     } else {
-      reward = 1 + Math.floor(Math.random() * 2); // gorjeta mínima por engano
+      reward = 1 + Math.floor(Math.random() * 2);
       showToast('Isso não era o que esse cliente pediu... ele aceitou por educação.');
     }
 
@@ -891,28 +919,53 @@ function recipeById(id){ return RECIPES.find(r => r.id === id); }
   function renderShop(){
     shopList.innerHTML = '';
 
-    RECIPES.filter(r => r.price > 0).forEach(r => {
+    RECIPES.filter(r => r.price > 0 || r.unlocked).forEach(r => {
       const row = document.createElement('div');
       row.className = 'shop-item';
-      row.innerHTML = `
-        <div class="shop-icon">${r.emoji}</div>
-        <div class="shop-info">
-          <div class="shop-name">${r.name}</div>
-          <div class="shop-desc">Nova receita para o cardápio</div>
-        </div>
-        <button class="shop-buy-btn">${r.unlocked ? 'Comprado ✓' : r.price + ' 🪙'}</button>
-      `;
-      const buyBtn = row.querySelector('.shop-buy-btn');
-      buyBtn.disabled = r.unlocked || state.coins < r.price;
-      buyBtn.addEventListener('click', () => {
-        if (r.unlocked || state.coins < r.price) return;
-        state.coins -= r.price;
-        r.unlocked = true;
-        updateCoinsUI();
-        renderRecipeTray();
-        renderShop();
-        showToast(`${r.name} adicionado ao cardápio!`);
-      });
+
+      if (!r.unlocked){
+        row.innerHTML = `
+          <div class="shop-icon">${r.emoji}</div>
+          <div class="shop-info">
+            <div class="shop-name">${r.name}</div>
+            <div class="shop-desc">Nova receita — vem com ${STOCK_PACK_SIZE} no estoque</div>
+          </div>
+          <button class="shop-buy-btn">${r.price} 🪙</button>
+        `;
+        const buyBtn = row.querySelector('.shop-buy-btn');
+        buyBtn.disabled = state.coins < r.price;
+        buyBtn.addEventListener('click', () => {
+          if (r.unlocked || state.coins < r.price) return;
+          state.coins -= r.price;
+          r.unlocked = true;
+          r.stock = STOCK_PACK_SIZE;
+          updateCoinsUI();
+          renderRecipeTray();
+          renderShop();
+          showToast(`${r.name} adicionado ao cardápio!`);
+        });
+      } else {
+        row.innerHTML = `
+          <div class="shop-icon">${r.emoji}</div>
+          <div class="shop-info">
+            <div class="shop-name">${r.name}</div>
+            <div class="shop-desc">Estoque atual: <span class="stock-count">${r.stock}</span></div>
+          </div>
+          <button class="shop-buy-btn secondary">+${STOCK_PACK_SIZE} por ${r.restockPrice} 🪙</button>
+        `;
+        const buyBtn = row.querySelector('.shop-buy-btn');
+        buyBtn.disabled = state.coins < r.restockPrice;
+        buyBtn.addEventListener('click', () => {
+          if (state.coins < r.restockPrice) return;
+          state.coins -= r.restockPrice;
+          r.stock += STOCK_PACK_SIZE;
+          updateCoinsUI();
+          refreshTrayStock();
+          renderShop();
+          showToast(`+${STOCK_PACK_SIZE} de ${r.name} no estoque!`);
+        });
+      }
+
       shopList.appendChild(row);
     });
 
@@ -956,7 +1009,7 @@ function recipeById(id){ return RECIPES.find(r => r.id === id); }
   shopCloseBtn.addEventListener('click', closeShop);
   document.getElementById('shop-close-x').addEventListener('click', closeShop);
   shopOverlay.addEventListener('click', (e) => {
-    if (e.target === shopOverlay) closeShop(); // clicou fora do painel
+    if (e.target === shopOverlay) closeShop();
   });
 
   // ---------------- PAUSE ----------------
@@ -1018,7 +1071,12 @@ function recipeById(id){ return RECIPES.find(r => r.id === id); }
     tables.forEach(t => {
       if (t.occupied){
         t.patience -= dt;
-        if (t.patience <= 0) customerLeaves(t);
+        if (t.patience <= 0){
+          customerLeaves(t);
+        } else {
+          const pct = Math.max(0, (t.patience / state.patienceTime) * 100);
+          t.ring.style.setProperty('--pct', pct + '%');
+        }
       }
     });
   }
