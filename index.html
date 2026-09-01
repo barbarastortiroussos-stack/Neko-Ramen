@@ -300,6 +300,21 @@
     animation:pop .2s ease-out;
   }
 
+  #trash-btn{
+    width:44px;
+    height:44px;
+    border-radius:12px;
+    border:2px solid var(--gold-dark);
+    background:linear-gradient(180deg, var(--ink-light), var(--ink-dark));
+    color:var(--paper);
+    font-size:1.2em;
+    cursor:pointer;
+    flex-shrink:0;
+    box-shadow:0 3px 8px var(--shadow);
+  }
+  #trash-btn:disabled{ opacity:.35; cursor:not-allowed; filter:grayscale(.5); }
+  #trash-btn:not(:disabled):active{ transform:scale(.9); }
+
   #kitchen-divider{
     width:2px;
     align-self:stretch;
@@ -504,6 +519,17 @@
     margin:14px auto 0;
   }
 
+  #reset-save-link{
+    text-align:center;
+    margin-top:14px;
+    font-size:11px;
+    color:#a79db3;
+    text-decoration:underline;
+    cursor:pointer;
+    opacity:.75;
+  }
+  #reset-save-link:hover{ opacity:1; color:var(--rose); }
+
   .toast{
     position:absolute;
     bottom:90px;
@@ -557,6 +583,7 @@
         <span id="coin-count">0</span>
       </div>
       <button class="icon-btn" id="shop-btn" title="Loja">🏮</button>
+      <button class="icon-btn" id="sound-btn" title="Som">🔊</button>
     </div>
     <button class="icon-btn" id="pause-btn" title="Pausar">⏸</button>
   </div>
@@ -593,6 +620,7 @@
   <!-- despensa: pegue um item do estoque e entregue na mesa certa -->
   <div id="kitchen-bar">
     <div id="carrying-slot" title="Prato na mão">—</div>
+    <button id="trash-btn" title="Descartar prato errado" disabled>🗑️</button>
     <div id="kitchen-divider"></div>
     <div id="recipe-tray"></div>
   </div>
@@ -624,6 +652,7 @@
       <div class="shop-sub">Desbloqueie receitas e reponha o estoque</div>
       <div id="shop-list"></div>
       <button class="game-btn" id="shop-close-btn">Fechar</button>
+      <div id="reset-save-link">Apagar progresso salvo</div>
     </div>
   </div>
 
@@ -701,6 +730,119 @@ const UPGRADES = [
 function recipeById(id){ return RECIPES.find(r => r.id === id); }
 
 /* =========================================================================
+   EFEITOS SONOROS
+   Gerados por síntese (Web Audio API) em vez de arquivos de áudio — assim
+   não depende de nenhum asset extra no repositório e funciona offline.
+   ========================================================================= */
+const SFX = (function(){
+  let ctx = null;
+  let enabled = true;
+
+  function ensureCtx(){
+    if (!ctx){
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      ctx = new AC();
+    }
+    if (ctx.state === 'suspended') ctx.resume();
+    return ctx;
+  }
+
+  function tone(freq, dur, type, vol, delay){
+    if (!enabled) return;
+    try{
+      const c = ensureCtx();
+      if (!c) return;
+      const t0 = c.currentTime + (delay || 0);
+      const osc = c.createOscillator();
+      const gain = c.createGain();
+      osc.type = type || 'sine';
+      osc.frequency.setValueAtTime(freq, t0);
+      gain.gain.setValueAtTime(0, t0);
+      gain.gain.linearRampToValueAtTime(vol || 0.15, t0 + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+      osc.connect(gain).connect(c.destination);
+      osc.start(t0);
+      osc.stop(t0 + dur + 0.03);
+    } catch(e){ /* som nunca deve travar o jogo */ }
+  }
+
+  return {
+    setEnabled(v){ enabled = v; },
+    isEnabled(){ return enabled; },
+    pickup(){ tone(660, 0.09, 'triangle', 0.15); },
+    success(){ tone(880, 0.09, 'sine', 0.2); tone(1320, 0.12, 'sine', 0.15, 0.06); },
+    miss(){ tone(180, 0.25, 'sawtooth', 0.15); },
+    trash(){ tone(300, 0.05, 'square', 0.1); tone(140, 0.12, 'square', 0.08, 0.05); },
+    arrive(){ tone(720, 0.08, 'sine', 0.12); },
+    leave(){ tone(400, 0.2, 'sine', 0.1); tone(280, 0.25, 'sine', 0.08, 0.08); },
+    buy(){ tone(500, 0.06, 'triangle', 0.15); tone(750, 0.1, 'triangle', 0.15, 0.05); },
+    click(){ tone(500, 0.04, 'square', 0.08); },
+    dayEnd(){ tone(523, 0.15, 'sine', 0.15); tone(659, 0.15, 'sine', 0.15, 0.1); tone(784, 0.3, 'sine', 0.18, 0.2); },
+  };
+})();
+
+/* =========================================================================
+   SALVAMENTO DE PROGRESSO (localStorage)
+   ========================================================================= */
+const SAVE_KEY = 'izakaya_no_entardecer_save_v1';
+
+function saveGame(state){
+  try{
+    const data = {
+      coins: state.coins,
+      day: state.day,
+      patienceTime: state.patienceTime,
+      spawnInterval: state.spawnInterval,
+      soundEnabled: SFX.isEnabled(),
+      recipes: RECIPES.map(r => ({ id:r.id, unlocked:r.unlocked, stock:r.stock })),
+      upgrades: UPGRADES.map(u => ({ id:u.id, unlocked:u.unlocked })),
+    };
+    localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+  } catch(e){
+    DebugPanel.log(`<strong>Aviso:</strong> não foi possível salvar o progresso (${e.message}).`);
+  }
+}
+
+function loadGame(state){
+  try{
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return false;
+    const data = JSON.parse(raw);
+
+    if (typeof data.coins === 'number') state.coins = data.coins;
+    if (typeof data.day === 'number') state.day = data.day;
+    if (typeof data.patienceTime === 'number') state.patienceTime = data.patienceTime;
+    if (typeof data.spawnInterval === 'number') state.spawnInterval = data.spawnInterval;
+    if (typeof data.soundEnabled === 'boolean') SFX.setEnabled(data.soundEnabled);
+
+    if (Array.isArray(data.recipes)){
+      data.recipes.forEach(saved => {
+        const r = recipeById(saved.id);
+        if (r){
+          r.unlocked = !!saved.unlocked;
+          if (typeof saved.stock === 'number') r.stock = saved.stock;
+        }
+      });
+    }
+    if (Array.isArray(data.upgrades)){
+      data.upgrades.forEach(saved => {
+        const u = UPGRADES.find(x => x.id === saved.id);
+        if (u) u.unlocked = !!saved.unlocked;
+      });
+    }
+    return true;
+  } catch(e){
+    DebugPanel.log(`<strong>Aviso:</strong> não foi possível carregar o progresso salvo (${e.message}).`);
+    return false;
+  }
+}
+
+function clearSave(){
+  try{ localStorage.removeItem(SAVE_KEY); } catch(e){ /* ignora */ }
+}
+
+/* =========================================================================
    JOGO
    ========================================================================= */
 (function(){
@@ -747,11 +889,14 @@ function recipeById(id){ return RECIPES.find(r => r.id === id); }
   const nextdayBtn = document.getElementById('nextday-btn');
   const toastEl = document.getElementById('toast');
   const carryingSlot = document.getElementById('carrying-slot');
+  const trashBtn = document.getElementById('trash-btn');
   const recipeTray = document.getElementById('recipe-tray');
   const shopBtn = document.getElementById('shop-btn');
   const shopOverlay = document.getElementById('shop-overlay');
   const shopList = document.getElementById('shop-list');
   const shopCloseBtn = document.getElementById('shop-close-btn');
+  const soundBtn = document.getElementById('sound-btn');
+  const resetSaveLink = document.getElementById('reset-save-link');
 
   // ---------------- UI HELPERS ----------------
   function updateCoinsUI(){
@@ -824,8 +969,19 @@ function recipeById(id){ return RECIPES.find(r => r.id === id); }
       carryingSlot.textContent = '—';
       carryingSlot.classList.remove('filled');
     }
+    trashBtn.disabled = !state.carrying;
     refreshTableHighlights();
   }
+
+  function discardCarrying(){
+    if (!state.carrying) return;
+    state.carrying = null;
+    updateCarryingUI();
+    SFX.trash();
+    showToast('Prato descartado na lixeira.');
+    saveGame(state);
+  }
+  trashBtn.addEventListener('click', discardCarrying);
 
   function pickFromStock(recipeId){
     if (state.carrying){
@@ -841,6 +997,8 @@ function recipeById(id){ return RECIPES.find(r => r.id === id); }
     state.carrying = recipe.id;
     refreshTrayStock();
     updateCarryingUI();
+    SFX.pickup();
+    saveGame(state);
   }
 
   // ---------------- CLIENTES ----------------
@@ -867,6 +1025,7 @@ function recipeById(id){ return RECIPES.find(r => r.id === id); }
     t.el.classList.add('show');
 
     refreshTableHighlights();
+    SFX.arrive();
   }
 
   function deliverTo(t){
@@ -885,9 +1044,11 @@ function recipeById(id){ return RECIPES.find(r => r.id === id); }
     if (correct){
       const [min, max] = recipe.reward;
       reward = min + Math.floor(Math.random() * (max - min + 1));
+      SFX.success();
     } else {
       reward = 1 + Math.floor(Math.random() * 2);
       showToast('Isso não era o que esse cliente pediu... ele aceitou por educação.');
+      SFX.miss();
     }
 
     state.coins += reward;
@@ -901,6 +1062,7 @@ function recipeById(id){ return RECIPES.find(r => r.id === id); }
 
     state.carrying = null;
     updateCarryingUI();
+    saveGame(state);
   }
 
   function customerLeaves(t){
@@ -908,6 +1070,7 @@ function recipeById(id){ return RECIPES.find(r => r.id === id); }
     t.orderId = null;
     t.el.classList.remove('show', 'match-highlight');
     showToast('Um cliente foi embora sem ser atendido...');
+    SFX.leave();
   }
 
   tables.forEach(t => {
@@ -943,6 +1106,8 @@ function recipeById(id){ return RECIPES.find(r => r.id === id); }
           renderRecipeTray();
           renderShop();
           showToast(`${r.name} adicionado ao cardápio!`);
+          SFX.buy();
+          saveGame(state);
         });
       } else {
         row.innerHTML = `
@@ -963,6 +1128,8 @@ function recipeById(id){ return RECIPES.find(r => r.id === id); }
           refreshTrayStock();
           renderShop();
           showToast(`+${STOCK_PACK_SIZE} de ${r.name} no estoque!`);
+          SFX.buy();
+          saveGame(state);
         });
       }
 
@@ -990,6 +1157,8 @@ function recipeById(id){ return RECIPES.find(r => r.id === id); }
         updateCoinsUI();
         renderShop();
         showToast(`${u.name} aplicado!`);
+        SFX.buy();
+        saveGame(state);
       });
       shopList.appendChild(row);
     });
@@ -1005,11 +1174,25 @@ function recipeById(id){ return RECIPES.find(r => r.id === id); }
     shopOverlay.classList.remove('show');
   }
 
-  shopBtn.addEventListener('click', openShop);
-  shopCloseBtn.addEventListener('click', closeShop);
-  document.getElementById('shop-close-x').addEventListener('click', closeShop);
+  shopBtn.addEventListener('click', () => { SFX.click(); openShop(); });
+  shopCloseBtn.addEventListener('click', () => { SFX.click(); closeShop(); });
+  document.getElementById('shop-close-x').addEventListener('click', () => { SFX.click(); closeShop(); });
   shopOverlay.addEventListener('click', (e) => {
     if (e.target === shopOverlay) closeShop();
+  });
+
+  soundBtn.addEventListener('click', () => {
+    SFX.setEnabled(!SFX.isEnabled());
+    soundBtn.textContent = SFX.isEnabled() ? '🔊' : '🔇';
+    if (SFX.isEnabled()) SFX.click();
+    saveGame(state);
+  });
+
+  resetSaveLink.addEventListener('click', () => {
+    if (confirm('Isso vai apagar todo o progresso salvo (moedas, dia, receitas, estoque). Tem certeza?')){
+      clearSave();
+      location.reload();
+    }
   });
 
   // ---------------- PAUSE ----------------
@@ -1019,8 +1202,8 @@ function recipeById(id){ return RECIPES.find(r => r.id === id); }
     pauseBtn.textContent = v ? '▶' : '⏸';
   }
 
-  pauseBtn.addEventListener('click', () => setPaused(!state.paused));
-  resumeBtn.addEventListener('click', () => setPaused(false));
+  pauseBtn.addEventListener('click', () => { SFX.click(); setPaused(!state.paused); });
+  resumeBtn.addEventListener('click', () => { SFX.click(); setPaused(false); });
 
   document.addEventListener('keydown', (e) => {
     if (e.code === 'Space' || e.key.toLowerCase() === 'p'){
@@ -1038,6 +1221,8 @@ function recipeById(id){ return RECIPES.find(r => r.id === id); }
     enddaySummary.textContent = `Você atendeu clientes durante o Dia ${state.day}.`;
     enddayCoins.textContent = state.coinsToday;
     enddayOverlay.classList.add('show');
+    SFX.dayEnd();
+    saveGame(state);
   }
 
   nextdayBtn.addEventListener('click', () => {
@@ -1047,6 +1232,7 @@ function recipeById(id){ return RECIPES.find(r => r.id === id); }
     state.shiftRunning = true;
     enddayOverlay.classList.remove('show');
     updateShiftUI();
+    saveGame(state);
   });
 
   // ---------------- LOOP PRINCIPAL ----------------
@@ -1097,11 +1283,21 @@ function recipeById(id){ return RECIPES.find(r => r.id === id); }
   }
 
   // ---------------- INIT ----------------
+  const hadSave = loadGame(state);
+  soundBtn.textContent = SFX.isEnabled() ? '🔊' : '🔇';
   renderRecipeTray();
   updateCarryingUI();
   updateCoinsUI();
   updateShiftUI();
+  if (hadSave) showToast(`Bem-vinda de volta! Continuando no Dia ${state.day}.`);
   requestAnimationFrame(loop);
+
+  // autosave: rede de segurança periódica + ao sair/minimizar a página
+  setInterval(() => saveGame(state), 5000);
+  window.addEventListener('beforeunload', () => saveGame(state));
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') saveGame(state);
+  });
 
   } catch(err){
     DebugPanel.log(`<strong>Erro de inicialização:</strong> ${err.message}`);
