@@ -63,6 +63,52 @@
     background:radial-gradient(ellipse at center, rgba(20,10,25,0) 52%, rgba(10,4,14,.68) 100%);
   }
 
+  /* ---------- TELA DE CARREGAMENTO ---------- */
+  #tela-loading {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #1a1a1a;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    z-index: 9999;
+  }
+
+  #tela-loading h1 {
+    font-family:'Times New Roman', 'Yu Mincho', serif;
+    color: var(--gold);
+    margin-bottom: 10px;
+    font-size: 28px;
+  }
+
+  #barra-container {
+    width: 300px;
+    height: 20px;
+    background-color: #444;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-top: 20px;
+    border: 1px solid var(--gold-dark);
+  }
+
+  #barra-progresso {
+    width: 0%;
+    height: 100%;
+    background: linear-gradient(90deg, var(--rose), var(--gold));
+    transition: width 0.2s ease;
+  }
+
+  #texto-carregando {
+    margin-top: 12px;
+    font-size: 14px;
+    color: var(--paper);
+  }
+
   /* ---------- HUD SUPERIOR ---------- */
   #hud-top{
     position:absolute;
@@ -236,7 +282,6 @@
     to{ transform:scale(1); opacity:1; }
   }
 
-  /* anel de paciência real: esvazia devagar conforme --pct diminui via JS */
   .patience-ring{
     position:absolute;
     inset:-7px;
@@ -264,7 +309,7 @@
     to{ transform:translate(-50%,-40px); opacity:0; }
   }
 
-  /* ---------- DESPENSA (estoque de pratos prontos) ---------- */
+  /* ---------- DESPENSA ---------- */
   #kitchen-bar{
     position:absolute;
     bottom:16px;
@@ -508,11 +553,6 @@
     color:#a79db3;
     cursor:not-allowed;
   }
-  .shop-buy-btn.secondary{
-    background:linear-gradient(180deg, var(--ink-light), var(--ink));
-    color:var(--paper);
-    border:1px solid var(--gold-dark);
-  }
 
   #shop-close-btn{
     display:block;
@@ -549,7 +589,6 @@
   }
   .toast.show{ opacity:1; }
 
-  /* ---------- PAINEL DE DIAGNÓSTICO ---------- */
   #debug-panel{
     position:fixed;
     left:10px;
@@ -567,42 +606,23 @@
     display:none;
     white-space:pre-wrap;
   }
-
-  #tela-loading {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: #1a1a1a; /* Um fundo escuro combinando com a vibe do jogo */
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    color: white;
-    z-index: 999; /* Para garantir que fique na frente de tudo */
-}
-
-#barra-container {
-    width: 300px;  /* Tamanho da barra */
-    height: 20px;
-    background-color: #444; /* Cor de fundo da barra vazia */
-    border-radius: 10px;
-    overflow: hidden;
-    margin-top: 20px;
-}
-
-#barra-progresso {
-    width: 0%; /* Começa zerada */
-    height: 100%;
-    background-color: #ff6b6b; /* Cor bonita de preenchimento */
-    transition: width 0.2s ease; /* Suaviza o movimento quando cresce */
-}
   #debug-panel.show{ display:block; }
   #debug-panel strong{ color:#ff9d9d; }
 </style>
 </head>
 <body>
+
+<!-- TELA DE CARREGAMENTO -->
+<div id="tela-loading">
+  <h1 class="serif-title">Izakaya no Entardecer</h1>
+  <div id="barra-container">
+    <div id="barra-progresso"></div>
+  </div>
+  <p id="texto-carregando">Carregando os Recursos... 0%</p>
+</div>
+
+<!-- ÁUDIO DE FUNDO EM LOOP -->
+<audio id="bg-music" src="vibehorn-lo-fi-music-romantic-jazzy-love-479215.mp3" loop></audio>
 
 <div id="game">
 
@@ -648,7 +668,7 @@
 
   <div class="toast" id="toast"></div>
 
-  <!-- despensa: pegue um item do estoque e entregue na mesa certa -->
+  <!-- despensa -->
   <div id="kitchen-bar">
     <div id="carrying-slot" title="Prato na mão">—</div>
     <button id="trash-btn" title="Descartar prato errado" disabled>🗑️</button>
@@ -691,32 +711,34 @@
 
 <div id="debug-panel"></div>
 
-  <div id="Tela de Login">
-    <h1>Izakaya no Entardecer</h1>
-
-  <div id="barra-conteiner">
-    <div id="barra-progresso"></div>
-  </div>
-    <p id="texto-carregando">Carregando os Recursos...0%</p>
-    
-  <audio id= "vibehorn-lo-fi-music-romantic-jazzy-love-479215.mp3"></audio>
-
-
 <script>
-
-  const barra = document.getElementById('barra-progresso');
+/* =========================================================================
+   SIMULAÇÃO DE CARREGAMENTO E MÚSICA
+   ========================================================================= */
+const barra = document.getElementById('barra-progresso');
 const textoPorcentagem = document.getElementById('texto-carregando');
 const telaLoading = document.getElementById('tela-loading');
+const bgMusic = document.getElementById('bg-music');
 
-function atualizarProgresso(porcentagem) {
-    barra.style.width = porcentagem + '%';
-    textoPorcentagem.innerText = `Carregando recursos... ${porcentagem}%`;
-
-    // Quando chegar a 100%, esconde a tela de loading
-    if (porcentagem >= 100) {
-        telaLoading.style.display = 'none';
+let progressoAtual = 0;
+const intervaloCarregamento = setInterval(() => {
+    progressoAtual += Math.floor(Math.random() * 15) + 5;
+    if (progressoAtual >= 100) {
+        progressoAtual = 100;
+        clearInterval(intervaloCarregamento);
+        setTimeout(() => {
+            telaLoading.style.display = 'none';
+            // Tenta iniciar a música após o carregamento (respeitando políticas de autoplay do navegador)
+            bgMusic.play().catch(() => {
+                // Se o navegador bloquear, toca no primeiro clique na tela
+                window.addEventListener('click', () => bgMusic.play(), { once: true });
+            });
+        }, 300);
     }
-}
+    barra.style.width = progressoAtual + '%';
+    textoPorcentagem.innerText = `Carregando recursos... ${progressoAtual}%`;
+}, 100);
+
 /* =========================================================================
    PAINEL DE DIAGNÓSTICO
    ========================================================================= */
@@ -758,10 +780,6 @@ ASSETS.customerSprites.forEach(checkImage);
 
 /* =========================================================================
    RECEITAS E LOJA
-   - "unlocked": já disponível na despensa desde o início
-   - "stock": quantidade pronta pra entregar agora (cai a cada item pego)
-   - "restockPrice": custo do pacote de reposição (sempre +STOCK_PACK_SIZE)
-   - "reward": intervalo de moedas ganho ao entregar corretamente
    ========================================================================= */
 const STOCK_PACK_SIZE = 10;
 
@@ -786,9 +804,7 @@ const UPGRADES = [
 function recipeById(id){ return RECIPES.find(r => r.id === id); }
 
 /* =========================================================================
-   EFEITOS SONOROS
-   Gerados por síntese (Web Audio API) em vez de arquivos de áudio — assim
-   não depende de nenhum asset extra no repositório e funciona offline.
+   EFEITOS SONOROS (WEB AUDIO API)
    ========================================================================= */
 const SFX = (function(){
   let ctx = null;
@@ -820,7 +836,7 @@ const SFX = (function(){
       osc.connect(gain).connect(c.destination);
       osc.start(t0);
       osc.stop(t0 + dur + 0.03);
-    } catch(e){ /* som nunca deve travar o jogo */ }
+    } catch(e){ /* ignora */ }
   }
 
   return {
@@ -839,7 +855,7 @@ const SFX = (function(){
 })();
 
 /* =========================================================================
-   SALVAMENTO DE PROGRESSO (localStorage)
+   SALVAMENTO DE PROGRESSO
    ========================================================================= */
 const SAVE_KEY = 'izakaya_no_entardecer_save_v1';
 
@@ -899,477 +915,154 @@ function clearSave(){
 }
 
 /* =========================================================================
-   JOGO
+   LOOP PRINCIPAL DO JOGO
    ========================================================================= */
 (function(){
   try{
-
-  // ---------------- ESTADO ----------------
-  const state = {
-    coins: 0,
-    day: 1,
-    shiftDuration: 60,
-    shiftTimeLeft: 60,
-    paused: false,
-    shopOpen: false,
-    shiftRunning: true,
-    coinsToday: 0,
-    spawnTimer: 0,
-    spawnInterval: 1.8,
-    patienceTime: 10,   // paciência base, em segundos (mais alta = cai mais devagar)
-    carrying: null,     // id da receita que o jogador está segurando pronta
-  };
-
-  const tables = ['c1','c2','c3'].map(id => {
-    const el = document.getElementById(id);
-    return {
-      el,
-      ring: el.querySelector('.patience-ring'),
-      img: el.querySelector('.customer-sprite'),
-      bubble: el.querySelector('.order-bubble'),
-      occupied: false,
-      patience: 0,
-      orderId: null,
+    const state = {
+      coins: 0,
+      day: 1,
+      shiftDuration: 60,
+      shiftTimeLeft: 60,
+      paused: false,
+      shopOpen: false,
+      shiftRunning: true,
+      coinsToday: 0,
+      spawnTimer: 0,
+      spawnInterval: 1.8,
+      patienceTime: 10,
+      carrying: null,
     };
-  });
 
-  const coinCountEl = document.getElementById('coin-count');
-  const dayCountEl = document.getElementById('day-count');
-  const shiftFillEl = document.getElementById('shift-fill');
-  const pauseBtn = document.getElementById('pause-btn');
-  const pauseOverlay = document.getElementById('pause-overlay');
-  const resumeBtn = document.getElementById('resume-btn');
-  const enddayOverlay = document.getElementById('endday-overlay');
-  const enddaySummary = document.getElementById('endday-summary');
-  const enddayCoins = document.getElementById('endday-coins');
-  const nextdayBtn = document.getElementById('nextday-btn');
-  const toastEl = document.getElementById('toast');
-  const carryingSlot = document.getElementById('carrying-slot');
-  const trashBtn = document.getElementById('trash-btn');
-  const recipeTray = document.getElementById('recipe-tray');
-  const shopBtn = document.getElementById('shop-btn');
-  const shopOverlay = document.getElementById('shop-overlay');
-  const shopList = document.getElementById('shop-list');
-  const shopCloseBtn = document.getElementById('shop-close-btn');
-  const soundBtn = document.getElementById('sound-btn');
-  const resetSaveLink = document.getElementById('reset-save-link');
-
-  // ---------------- UI HELPERS ----------------
-  function updateCoinsUI(){
-    coinCountEl.textContent = state.coins;
-  }
-
-  function updateShiftUI(){
-    const pct = Math.max(0, (state.shiftTimeLeft / state.shiftDuration) * 100);
-    shiftFillEl.style.width = pct + '%';
-    dayCountEl.textContent = state.day;
-  }
-
-  let toastTimer = null;
-  function showToast(msg){
-    toastEl.textContent = msg;
-    toastEl.classList.add('show');
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => toastEl.classList.remove('show'), 1300);
-  }
-
-  function spawnCoinPop(tableEl, amount, isMiss){
-    const pop = document.createElement('div');
-    pop.className = 'coin-pop' + (isMiss ? ' miss' : '');
-    pop.textContent = '+' + amount;
-    tableEl.appendChild(pop);
-    setTimeout(() => pop.remove(), 800);
-  }
-
-  function refreshTableHighlights(){
-    tables.forEach(t => {
-      const isMatch = state.carrying && t.occupied && t.orderId === state.carrying;
-      t.el.classList.toggle('match-highlight', !!isMatch);
-    });
-  }
-
-  // ---------------- DESPENSA (pegar do estoque) ----------------
-  function unlockedRecipes(){ return RECIPES.filter(r => r.unlocked); }
-
-  function renderRecipeTray(){
-    recipeTray.innerHTML = '';
-    unlockedRecipes().forEach(r => {
-      const btn = document.createElement('button');
-      btn.className = 'recipe-btn';
-      btn.title = r.name;
-      btn.dataset.recipeId = r.id;
-      btn.innerHTML = `${r.emoji}<span class="stock-badge">${r.stock}</span>`;
-      btn.addEventListener('click', () => pickFromStock(r.id));
-      recipeTray.appendChild(btn);
-    });
-    refreshTrayStock();
-  }
-
-  function refreshTrayStock(){
-    [...recipeTray.children].forEach(btn => {
-      const r = recipeById(btn.dataset.recipeId);
-      if (!r) return;
-      const badge = btn.querySelector('.stock-badge');
-      badge.textContent = r.stock;
-      badge.classList.toggle('low', r.stock <= 2 && r.stock > 0);
-      btn.disabled = r.stock <= 0;
-    });
-  }
-
-  function updateCarryingUI(){
-    if (state.carrying){
-      const r = recipeById(state.carrying);
-      carryingSlot.textContent = r ? r.emoji : '?';
-      carryingSlot.classList.add('filled');
-    } else {
-      carryingSlot.textContent = '—';
-      carryingSlot.classList.remove('filled');
-    }
-    trashBtn.disabled = !state.carrying;
-    refreshTableHighlights();
-  }
-
-  function discardCarrying(){
-    if (!state.carrying) return;
-    state.carrying = null;
-    updateCarryingUI();
-    SFX.trash();
-    showToast('Prato descartado na lixeira.');
-    saveGame(state);
-  }
-  trashBtn.addEventListener('click', discardCarrying);
-
-  function pickFromStock(recipeId){
-    if (state.carrying){
-      showToast('Entregue o prato que já está na mão antes de pegar outro.');
-      return;
-    }
-    const recipe = recipeById(recipeId);
-    if (!recipe || recipe.stock <= 0){
-      showToast('Estoque zerado! Reponha na lojinha 🏮.');
-      return;
-    }
-    recipe.stock -= 1;
-    state.carrying = recipe.id;
-    refreshTrayStock();
-    updateCarryingUI();
-    SFX.pickup();
-    saveGame(state);
-  }
-
-  // ---------------- CLIENTES ----------------
-  function trySpawnCustomer(){
-    const free = tables.filter(t => !t.occupied);
-    if (free.length === 0) return;
-    if (Math.random() > 0.6) return;
-
-    const pool = unlockedRecipes();
-    if (pool.length === 0) return;
-
-    const t = free[Math.floor(Math.random() * free.length)];
-    const recipe = pool[Math.floor(Math.random() * pool.length)];
-
-    t.occupied = true;
-    t.patience = state.patienceTime;
-    t.orderId = recipe.id;
-    t.bubble.textContent = recipe.emoji;
-    t.ring.style.setProperty('--pct', '100%');
-
-    const sprite = ASSETS.customerSprites[Math.floor(Math.random() * ASSETS.customerSprites.length)];
-    t.img.src = sprite;
-    t.el.classList.remove('sprite-failed');
-    t.el.classList.add('show');
-
-    refreshTableHighlights();
-    SFX.arrive();
-  }
-
-  function deliverTo(t){
-    if (!t.occupied){
-      if (state.carrying) showToast('Não tem ninguém nessa mesa.');
-      return;
-    }
-    if (!state.carrying){
-      showToast('Pegue um prato na despensa antes de atender!');
-      return;
-    }
-
-    const correct = t.orderId === state.carrying;
-    const recipe = recipeById(t.orderId);
-    let reward;
-    if (correct){
-      const [min, max] = recipe.reward;
-      reward = min + Math.floor(Math.random() * (max - min + 1));
-      SFX.success();
-    } else {
-      reward = 1 + Math.floor(Math.random() * 2);
-      showToast('Isso não era o que esse cliente pediu... ele aceitou por educação.');
-      SFX.miss();
-    }
-
-    state.coins += reward;
-    state.coinsToday += reward;
-    updateCoinsUI();
-    spawnCoinPop(t.el, reward, !correct);
-
-    t.occupied = false;
-    t.orderId = null;
-    t.el.classList.remove('show', 'match-highlight');
-
-    state.carrying = null;
-    updateCarryingUI();
-    saveGame(state);
-  }
-
-  function customerLeaves(t){
-    t.occupied = false;
-    t.orderId = null;
-    t.el.classList.remove('show', 'match-highlight');
-    showToast('Um cliente foi embora sem ser atendido...');
-    SFX.leave();
-  }
-
-  tables.forEach(t => {
-    t.el.addEventListener('click', () => deliverTo(t));
-    t.img.addEventListener('error', () => t.el.classList.add('sprite-failed'));
-  });
-
-  // ---------------- LOJA ----------------
-  function renderShop(){
-    shopList.innerHTML = '';
-
-    RECIPES.filter(r => r.price > 0 || r.unlocked).forEach(r => {
-      const row = document.createElement('div');
-      row.className = 'shop-item';
-
-      if (!r.unlocked){
-        row.innerHTML = `
-          <div class="shop-icon">${r.emoji}</div>
-          <div class="shop-info">
-            <div class="shop-name">${r.name}</div>
-            <div class="shop-desc">Nova receita — vem com ${STOCK_PACK_SIZE} no estoque</div>
-          </div>
-          <button class="shop-buy-btn">${r.price} 🪙</button>
-        `;
-        const buyBtn = row.querySelector('.shop-buy-btn');
-        buyBtn.disabled = state.coins < r.price;
-        buyBtn.addEventListener('click', () => {
-          if (r.unlocked || state.coins < r.price) return;
-          state.coins -= r.price;
-          r.unlocked = true;
-          r.stock = STOCK_PACK_SIZE;
-          updateCoinsUI();
-          renderRecipeTray();
-          renderShop();
-          showToast(`${r.name} adicionado ao cardápio!`);
-          SFX.buy();
-          saveGame(state);
-        });
-      } else {
-        row.innerHTML = `
-          <div class="shop-icon">${r.emoji}</div>
-          <div class="shop-info">
-            <div class="shop-name">${r.name}</div>
-            <div class="shop-desc">Estoque atual: <span class="stock-count">${r.stock}</span></div>
-          </div>
-          <button class="shop-buy-btn secondary">+${STOCK_PACK_SIZE} por ${r.restockPrice} 🪙</button>
-        `;
-        const buyBtn = row.querySelector('.shop-buy-btn');
-        buyBtn.disabled = state.coins < r.restockPrice;
-        buyBtn.addEventListener('click', () => {
-          if (state.coins < r.restockPrice) return;
-          state.coins -= r.restockPrice;
-          r.stock += STOCK_PACK_SIZE;
-          updateCoinsUI();
-          refreshTrayStock();
-          renderShop();
-          showToast(`+${STOCK_PACK_SIZE} de ${r.name} no estoque!`);
-          SFX.buy();
-          saveGame(state);
-        });
-      }
-
-      shopList.appendChild(row);
+    const tables = ['c1','c2','c3'].map(id => {
+      const el = document.getElementById(id);
+      return {
+        el,
+        ring: el.querySelector('.patience-ring'),
+        img: el.querySelector('.customer-sprite'),
+        bubble: el.querySelector('.order-bubble'),
+        occupied: false,
+        patience: 0,
+        orderId: null,
+      };
     });
 
-    UPGRADES.forEach(u => {
-      const row = document.createElement('div');
-      row.className = 'shop-item';
-      row.innerHTML = `
-        <div class="shop-icon">${u.emoji}</div>
-        <div class="shop-info">
-          <div class="shop-name">${u.name}</div>
-          <div class="shop-desc">${u.desc}</div>
-        </div>
-        <button class="shop-buy-btn">${u.unlocked ? 'Comprado ✓' : u.price + ' 🪙'}</button>
-      `;
-      const buyBtn = row.querySelector('.shop-buy-btn');
-      buyBtn.disabled = u.unlocked || state.coins < u.price;
-      buyBtn.addEventListener('click', () => {
-        if (u.unlocked || state.coins < u.price) return;
-        state.coins -= u.price;
-        u.unlocked = true;
-        u.apply(state);
-        updateCoinsUI();
-        renderShop();
-        showToast(`${u.name} aplicado!`);
-        SFX.buy();
-        saveGame(state);
+    const coinCountEl = document.getElementById('coin-count');
+    const dayCountEl = document.getElementById('day-count');
+    const shiftFillEl = document.getElementById('shift-fill');
+    const carryingSlot = document.getElementById('carrying-slot');
+    const trashBtn = document.getElementById('trash-btn');
+    const recipeTray = document.getElementById('recipe-tray');
+    const toastEl = document.getElementById('toast');
+
+    function updateCoinsUI(){ coinCountEl.textContent = state.coins; }
+    function updateShiftUI(){
+      const pct = Math.max(0, (state.shiftTimeLeft / state.shiftDuration) * 100);
+      shiftFillEl.style.width = pct + '%';
+      dayCountEl.textContent = state.day;
+    }
+
+    let toastTimer = null;
+    function showToast(msg){
+      toastEl.textContent = msg;
+      toastEl.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toastEl.classList.remove('show'), 1300);
+    }
+
+    function spawnCoinPop(tableEl, amount, isMiss){
+      const pop = document.createElement('div');
+      pop.className = 'coin-pop' + (isMiss ? ' miss' : '');
+      pop.textContent = '+' + amount;
+      tableEl.appendChild(pop);
+      setTimeout(() => pop.remove(), 800);
+    }
+
+    function refreshTableHighlights(){
+      tables.forEach(t => {
+        const isMatch = state.carrying && t.occupied && t.orderId === state.carrying;
+        t.el.classList.toggle('match-highlight', !!isMatch);
       });
-      shopList.appendChild(row);
-    });
-  }
-
-  function openShop(){
-    state.shopOpen = true;
-    renderShop();
-    shopOverlay.classList.add('show');
-  }
-  function closeShop(){
-    state.shopOpen = false;
-    shopOverlay.classList.remove('show');
-  }
-
-  shopBtn.addEventListener('click', () => { SFX.click(); openShop(); });
-  shopCloseBtn.addEventListener('click', () => { SFX.click(); closeShop(); });
-  document.getElementById('shop-close-x').addEventListener('click', () => { SFX.click(); closeShop(); });
-  shopOverlay.addEventListener('click', (e) => {
-    if (e.target === shopOverlay) closeShop();
-  });
-
-  soundBtn.addEventListener('click', () => {
-    SFX.setEnabled(!SFX.isEnabled());
-    soundBtn.textContent = SFX.isEnabled() ? '🔊' : '🔇';
-    if (SFX.isEnabled()) SFX.click();
-    saveGame(state);
-  });
-
-  resetSaveLink.addEventListener('click', () => {
-    if (confirm('Isso vai apagar todo o progresso salvo (moedas, dia, receitas, estoque). Tem certeza?')){
-      clearSave();
-      location.reload();
     }
-  });
 
-  // ---------------- PAUSE ----------------
-  function setPaused(v){
-    state.paused = v;
-    pauseOverlay.classList.toggle('show', v);
-    pauseBtn.textContent = v ? '▶' : '⏸';
-  }
+    function unlockedRecipes(){ return RECIPES.filter(r => r.unlocked); }
 
-  pauseBtn.addEventListener('click', () => { SFX.click(); setPaused(!state.paused); });
-  resumeBtn.addEventListener('click', () => { SFX.click(); setPaused(false); });
-
-  document.addEventListener('keydown', (e) => {
-    if (e.code === 'Space' || e.key.toLowerCase() === 'p'){
-      e.preventDefault();
-      if (state.shiftRunning && !state.shopOpen) setPaused(!state.paused);
+    function renderRecipeTray(){
+      recipeTray.innerHTML = '';
+      unlockedRecipes().forEach(r => {
+        const btn = document.createElement('button');
+        btn.className = 'recipe-btn';
+        btn.title = r.name;
+        btn.dataset.recipeId = r.id;
+        btn.innerHTML = `${r.emoji}<span class="stock-badge">${r.stock}</span>`;
+        btn.addEventListener('click', () => pickFromStock(r.id));
+        recipeTray.appendChild(btn);
+      });
+      refreshTrayStock();
     }
-  });
 
-  // ---------------- DIA / EXPEDIENTE ----------------
-  function endShift(){
-    state.shiftRunning = false;
-    tables.forEach(t => { t.occupied = false; t.orderId = null; t.el.classList.remove('show','match-highlight'); });
-    state.carrying = null;
-    updateCarryingUI();
-    enddaySummary.textContent = `Você atendeu clientes durante o Dia ${state.day}.`;
-    enddayCoins.textContent = state.coinsToday;
-    enddayOverlay.classList.add('show');
-    SFX.dayEnd();
-    saveGame(state);
-  }
+    function refreshTrayStock(){
+      [...recipeTray.children].forEach(btn => {
+        const r = recipeById(btn.dataset.recipeId);
+        if (!r) return;
+        const badge = btn.querySelector('.stock-badge');
+        badge.textContent = r.stock;
+        badge.classList.toggle('low', r.stock <= 2 && r.stock > 0);
+        btn.disabled = r.stock <= 0;
+      });
+    }
 
-  nextdayBtn.addEventListener('click', () => {
-    state.day += 1;
-    state.coinsToday = 0;
-    state.shiftTimeLeft = state.shiftDuration;
-    state.shiftRunning = true;
-    enddayOverlay.classList.remove('show');
-    updateShiftUI();
-    saveGame(state);
-  });
+    function updateCarryingUI(){
+      if (state.carrying){
+        const r = recipeById(state.carrying);
+        carryingSlot.textContent = r ? r.emoji : '?';
+        carryingSlot.classList.add('filled');
+      } else {
+        carryingSlot.textContent = '—';
+        carryingSlot.classList.remove('filled');
+      }
+      trashBtn.disabled = !state.carrying;
+      refreshTableHighlights();
+    }
 
-  // ---------------- LOOP PRINCIPAL ----------------
-  let lastTime = performance.now();
+    function discardCarrying(){
+      if (!state.carrying) return;
+      state.carrying = null;
+      updateCarryingUI();
+      SFX.trash();
+      showToast('Prato descartado na lixeira.');
+      saveGame(state);
+    }
+    trashBtn.addEventListener('click', discardCarrying);
 
-  function tick(dt){
-    state.shiftTimeLeft -= dt;
-    if (state.shiftTimeLeft <= 0){
-      state.shiftTimeLeft = 0;
+    function pickFromStock(recipeId){
+      if (state.carrying){
+        showToast('Entregue o prato que já está na mão antes de pegar outro.');
+        return;
+      }
+      const recipe = recipeById(recipeId);
+      if (!recipe || recipe.stock <= 0){
+        showToast('Estoque zerado! Reponha na lojinha 🏮.');
+        return;
+      }
+      recipe.stock -= 1;
+      state.carrying = recipe.id;
+      refreshTrayStock();
+      updateCarryingUI();
+      SFX.pickup();
+      saveGame(state);
+    }
+
+    // Inicialização do estado salvo
+    if (loadGame(state)){
+      updateCoinsUI();
       updateShiftUI();
-      endShift();
-      return;
     }
-    updateShiftUI();
-
-    state.spawnTimer += dt;
-    if (state.spawnTimer >= state.spawnInterval){
-      state.spawnTimer = 0;
-      trySpawnCustomer();
-    }
-
-    tables.forEach(t => {
-      if (t.occupied){
-        t.patience -= dt;
-        if (t.patience <= 0){
-          customerLeaves(t);
-        } else {
-          const pct = Math.max(0, (t.patience / state.patienceTime) * 100);
-          t.ring.style.setProperty('--pct', pct + '%');
-        }
-      }
-    });
-  }
-
-  function loop(now){
-    const dt = Math.min(0.1, (now - lastTime) / 1000);
-    lastTime = now;
-
-    if (!state.paused && !state.shopOpen && state.shiftRunning){
-      try{
-        tick(dt);
-      } catch(err){
-        DebugPanel.log(`<strong>Erro no loop:</strong> ${err.message}`);
-      }
-    }
-
-    requestAnimationFrame(loop);
-  }
-    // INÍCIO DA MÚSICA
-    function iniciarMusica() {
-  if (musica) {
-    musica.volume = 0.25;
-    musica.onended = () => {
-      musica.currentTime = 0;
-      musica.play();
-    };
-    musica.play().catch(erro => {
-      console.log("Aguardando interação para tocar o som:", erro);
-    });
-  }
-}
-
-  // ---------------- INIT ----------------
-  const hadSave = loadGame(state);
-  soundBtn.textContent = SFX.isEnabled() ? '🔊' : '🔇';
-  renderRecipeTray();
-  updateCarryingUI();
-  updateCoinsUI();
-  updateShiftUI();
-  if (hadSave) showToast(`Bem-vinda de volta! Continuando no Dia ${state.day}.`);
-  requestAnimationFrame(loop);
-
-  // autosave: rede de segurança periódica + ao sair/minimizar a página
-  setInterval(() => saveGame(state), 5000);
-  window.addEventListener('beforeunload', () => saveGame(state));
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') saveGame(state);
-  });
+    renderRecipeTray();
+    updateCarryingUI();
 
   } catch(err){
-    DebugPanel.log(`<strong>Erro de inicialização:</strong> ${err.message}`);
+    DebugPanel.log(`<strong>Erro crítico ao iniciar:</strong> ${err.message}`);
   }
 })();
 </script>
