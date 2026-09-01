@@ -1284,6 +1284,19 @@ function clearSave(){
 
     requestAnimationFrame(loop);
   }
+    // INÍCIO DA MÚSICA
+    function iniciarMusica() {
+  if (musica) {
+    musica.volume = 0.25;
+    musica.onended = () => {
+      musica.currentTime = 0;
+      musica.play();
+    };
+    musica.play().catch(erro => {
+      console.log("Aguardando interação para tocar o som:", erro);
+    });
+  }
+}
 
   // ---------------- INIT ----------------
   const hadSave = loadGame(state);
