@@ -5,613 +5,202 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Izakaya no Entardecer</title>
 <style>
-  :root{
-    --ink-dark:#140f1c;
-    --ink:#241a30;
-    --ink-light:#3a2a4a;
-    --plum:#5c2a45;
-    --gold:#d3b678;
-    --gold-dark:#8a6f3a;
-    --rose:#e3a9c0;
-    --paper:#efe6f0;
-    --jade:#6fae5c;
-    --shadow:rgba(10,4,14,.65);
-  }
+        /* RESET BÁSICO */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
 
-  *{box-sizing:border-box;}
+        body {
+            background-color: #0D0D0D;
+            color: #FFFFFF;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
 
-  html,body{
-    margin:0;
-    padding:0;
-    height:100%;
-    background:linear-gradient(160deg, #241a30, #0f0a16);
-    font-family:'Segoe UI', 'Hiragino Sans', sans-serif;
-    overflow:hidden;
-    user-select:none;
-  }
+        /* Container fixo de proporção exata */
+        #gameContainer {
+            position: relative;
+            width: 800px;
+            height: 600px;
+            max-width: 100vw;
+            max-height: 100vh;
+            background: #000;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+        }
 
-  .serif-title{
-    font-family:'Times New Roman', 'Yu Mincho', serif;
-    letter-spacing:1px;
-  }
-  .serif-title::before, .serif-title::after{
-    content:"✦";
-    color:var(--rose);
-    font-size:.65em;
-    margin:0 10px;
-    vertical-align:middle;
-    opacity:.85;
-  }
+        #gameCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            touch-action: manipulation;
+        }
 
-  #game{
-    position:relative;
-    width:100vw;
-    height:100vh;
-    background:
-      url('background.png') center center / cover no-repeat,
-      linear-gradient(160deg, #241a30, #0f0a16);
-    display:flex;
-    flex-direction:column;
-    justify-content:flex-end;
-  }
+        /* PLACAR */
+        #scoreBoard {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 2rem;
+            font-weight: bold;
+            color: #00F5D4;
+            text-shadow: 0 0 10px rgba(0, 245, 212, 0.5);
+            z-index: 5;
+            pointer-events: none; /* Garante que cliques passem direto por ele */
+        }
 
-  #game::after{
-    content:"";
-    position:absolute;
-    inset:0;
-    pointer-events:none;
-    background:radial-gradient(ellipse at center, rgba(20,10,25,0) 52%, rgba(10,4,14,.68) 100%);
-  }
+        /* CONTROLES DO CABEÇALHO */
+        #topControls {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            display: flex;
+            gap: 10px;
+            z-index: 20; /* Acima de tudo */
+        }
 
-  /* ---------- TELA DE CARREGAMENTO ---------- */
-  #tela-loading{
-    position:fixed;
-    inset:0;
-    background:linear-gradient(160deg, #241a30, #0f0a16);
-    display:flex;
-    flex-direction:column;
-    justify-content:center;
-    align-items:center;
-    color:var(--paper);
-    z-index:9998;
-    transition:opacity .4s ease;
-  }
-  #tela-loading h1{
-    font-family:'Times New Roman', 'Yu Mincho', serif;
-    color:var(--gold);
-    margin-bottom:10px;
-    font-size:26px;
-    letter-spacing:1px;
-  }
-  #barra-container{
-    width:260px;
-    height:12px;
-    background:rgba(0,0,0,.5);
-    border-radius:999px;
-    overflow:hidden;
-    margin-top:18px;
-    border:1px solid var(--gold-dark);
-  }
-  #barra-progresso{
-    width:0%;
-    height:100%;
-    background:linear-gradient(90deg, var(--rose), var(--gold));
-    transition:width .15s ease;
-  }
-  #texto-carregando{
-    margin-top:10px;
-    font-size:13px;
-    color:var(--paper);
-    opacity:.8;
-  }
+        .icon-btn {
+            background: rgba(43, 11, 20, 0.85);
+            border: 1px solid #6B0F24;
+            color: #FFFFFF;
+            font-size: 1.2rem;
+            padding: 6px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
 
-  /* ---------- HUD SUPERIOR ---------- */
-  #hud-top{
-    position:absolute;
-    top:0; left:0; right:0;
-    display:flex;
-    justify-content:space-between;
-    align-items:flex-start;
-    padding:16px 20px;
-    z-index:20;
-    pointer-events:none;
-  }
+        .icon-btn:hover {
+            background: #6B0F24;
+        }
 
-  .hud-left, .hud-right{
-    display:flex;
-    align-items:center;
-    gap:10px;
-    pointer-events:none;
-  }
+        /* TELAS DE OVERLAY (START, PAUSE, GAME OVER) */
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(13, 13, 13, 0.9);
+            backdrop-filter: blur(4px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            z-index: 15; /* Acima do canvas, abaixo dos controles de topo */
+            transition: opacity 0.3s ease;
+        }
 
-  .hud-pill{
-    pointer-events:auto;
-    display:flex;
-    align-items:center;
-    gap:8px;
-    background:linear-gradient(180deg, var(--ink-light), var(--ink));
-    border:1.5px solid var(--gold-dark);
-    border-radius:999px;
-    padding:8px 16px;
-    color:var(--paper);
-    font-weight:700;
-    font-size:18px;
-    box-shadow:0 4px 10px var(--shadow), inset 0 1px 0 rgba(255,255,255,.08);
-  }
+        .hidden {
+            display: none !important;
+        }
 
-  .coin-icon{
-    width:24px;height:24px;
-    border-radius:50%;
-    background:radial-gradient(circle at 35% 30%, #fff6e0, var(--gold) 55%, var(--gold-dark) 100%);
-    border:2px solid var(--gold-dark);
-    display:inline-block;
-    box-shadow:0 0 6px rgba(211,182,120,.7);
-  }
+        h1 {
+            font-size: 2.8rem;
+            color: #00F5D4;
+            text-shadow: 0 0 15px rgba(0, 245, 212, 0.4);
+            letter-spacing: 2px;
+            text-align: center;
+        }
 
-  .icon-btn{
-    pointer-events:auto;
-    background:linear-gradient(180deg, var(--ink-light), var(--ink));
-    border:1.5px solid var(--gold-dark);
-    color:var(--paper);
-    width:46px;height:46px;
-    border-radius:12px;
-    font-size:20px;
-    cursor:pointer;
-    box-shadow:0 4px 10px var(--shadow);
-    transition:transform .1s;
-  }
-  .icon-btn:active{ transform:scale(.92); }
+        h2 {
+            font-size: 2.2rem;
+            color: #E60067;
+            text-shadow: 0 0 10px rgba(230, 0, 103, 0.4);
+            text-align: center;
+        }
 
-  /* ---------- BARRA DE EXPEDIENTE ---------- */
-  #shift-bar-wrap{
-    position:absolute;
-    top:64px;
-    left:50%;
-    transform:translateX(-50%);
-    width:min(480px, 70vw);
-    z-index:20;
-    text-align:center;
-    pointer-events:none;
-  }
+        .menu-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            width: 220px;
+        }
 
-  #shift-label{
-    color:var(--paper);
-    font-size:13px;
-    font-weight:700;
-    letter-spacing:.5px;
-    text-shadow:0 2px 4px #000;
-    margin-bottom:4px;
-  }
+        .menu-group label {
+            font-size: 0.9rem;
+            color: #A0A0A0;
+        }
 
-  #shift-track{
-    height:14px;
-    border-radius:999px;
-    background:rgba(0,0,0,.5);
-    border:1px solid var(--gold-dark);
-    overflow:hidden;
-    box-shadow:inset 0 2px 4px rgba(0,0,0,.6);
-  }
+        select {
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid #6B0F24;
+            background: #2B0B14;
+            color: #FFF;
+            font-size: 1rem;
+            outline: none;
+        }
 
-  #shift-fill{
-    height:100%;
-    width:100%;
-    background:linear-gradient(90deg, var(--rose), var(--gold) 60%, var(--gold-dark));
-    transition:width .2s linear;
-  }
+        .btn {
+            padding: 12px 32px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #0D0D0D;
+            background: #00F5D4;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 0 12px rgba(0, 245, 212, 0.4);
+            transition: transform 0.1s, background 0.2s;
+        }
 
-  /* ---------- MESAS / CLIENTES ---------- */
-  #tables-layer{
-    position:absolute;
-    inset:0;
-    z-index:10;
-  }
+        .btn:hover {
+            background: #00d6b9;
+            transform: scale(1.03);
+        }
+     
+        /* CONTROLES TOUCH MÓVEIS */
+        #touchControls {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            z-index: 15;
+        }
 
-  .table-spot{
-    position:absolute;
-    width:9%;
-    aspect-ratio:1/1;
-    transform:translate(-50%,-50%);
-    cursor:pointer;
-  }
+        .touch-left-group, .touch-right-group {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .touch-btn {
+            width: 55px;
+            height: 55px;
+            border-radius: 50%;
+            background: rgba(43, 11, 20, 0.8);
+            border: 1px solid rgba(0, 245, 212, 0.3);
+            color: white;
+            font-size: 1.4rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            touch-action: manipulation;
+            cursor: pointer;
+        }
 
-  .table-spot.t1{ left:28%; top:53%; }
-  .table-spot.t2{ left:50%; top:51%; }
-  .table-spot.t3{ left:73%; top:53%; }
-
-  .customer{
-    width:100%;
-    height:100%;
-    border-radius:50%;
-    display:none;
-    align-items:center;
-    justify-content:center;
-    position:relative;
-    background:radial-gradient(circle at 35% 30%, #fff, var(--rose) 55%, var(--plum) 100%);
-    border:3px solid #f2e6d8;
-    box-shadow:0 0 18px rgba(227,169,192,.75), 0 6px 12px var(--shadow);
-    animation:pop .25s ease-out;
-    overflow:visible;
-    transition:box-shadow .2s;
-  }
-  .customer.show{ display:flex; }
-
-  .customer.match-highlight{
-    box-shadow:0 0 0 6px rgba(111,174,92,.55), 0 0 18px rgba(227,169,192,.75), 0 6px 12px var(--shadow);
-  }
-
-  .customer-sprite{
-    width:100%;
-    height:100%;
-    border-radius:50%;
-    object-fit:cover;
-    object-position:top center;
-    pointer-events:none;
-  }
-
-  .customer-fallback-emoji{
-    display:none;
-    font-size:2em;
-    pointer-events:none;
-  }
-  .customer.sprite-failed .customer-sprite{ display:none; }
-  .customer.sprite-failed .customer-fallback-emoji{ display:block; }
-
-  .order-bubble{
-    position:absolute;
-    top:-14px;
-    right:-10px;
-    width:30px;
-    height:30px;
-    border-radius:50%;
-    background:var(--paper);
-    border:2px solid var(--gold-dark);
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-size:1em;
-    box-shadow:0 3px 6px var(--shadow);
-    pointer-events:none;
-  }
-
-  @keyframes pop{
-    from{ transform:scale(.4); opacity:0; }
-    to{ transform:scale(1); opacity:1; }
-  }
-
-  /* anel de paciência real: esvazia devagar conforme --pct diminui via JS */
-  .patience-ring{
-    position:absolute;
-    inset:-7px;
-    border-radius:50%;
-    background:conic-gradient(var(--rose) var(--pct, 100%), rgba(255,255,255,.12) 0);
-    -webkit-mask:radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 4px));
-            mask:radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 4px));
-    pointer-events:none;
-  }
-
-  .coin-pop{
-    position:absolute;
-    top:-14px;
-    left:50%;
-    transform:translateX(-50%);
-    color:var(--gold);
-    font-weight:800;
-    font-size:16px;
-    text-shadow:0 2px 4px #000;
-    pointer-events:none;
-    animation:rise .8s ease-out forwards;
-  }
-  .coin-pop.miss{ color:#d8cfe0; }
-  @keyframes rise{
-    to{ transform:translate(-50%,-40px); opacity:0; }
-  }
-
-  /* ---------- DESPENSA (estoque de pratos prontos) ---------- */
-  #kitchen-bar{
-    position:absolute;
-    bottom:16px;
-    left:50%;
-    transform:translateX(-50%);
-    z-index:25;
-    display:flex;
-    align-items:center;
-    gap:10px;
-    background:linear-gradient(180deg, var(--ink-light), var(--ink-dark));
-    border:1.5px solid var(--gold-dark);
-    border-radius:18px;
-    padding:10px 14px;
-    box-shadow:0 6px 18px var(--shadow);
-  }
-
-  #carrying-slot{
-    width:52px;
-    height:52px;
-    border-radius:12px;
-    border:2px dashed var(--gold-dark);
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-size:1.6em;
-    background:rgba(0,0,0,.3);
-    flex-shrink:0;
-    color:var(--paper);
-  }
-  #carrying-slot.filled{
-    border-style:solid;
-    background:radial-gradient(circle at 35% 30%, #fff6e0, var(--gold) 60%, var(--gold-dark));
-    animation:pop .2s ease-out;
-  }
-
-  #trash-btn{
-    width:44px;
-    height:44px;
-    border-radius:12px;
-    border:2px solid var(--gold-dark);
-    background:linear-gradient(180deg, var(--ink-light), var(--ink-dark));
-    color:var(--paper);
-    font-size:1.2em;
-    cursor:pointer;
-    flex-shrink:0;
-    box-shadow:0 3px 8px var(--shadow);
-  }
-  #trash-btn:disabled{ opacity:.35; cursor:not-allowed; filter:grayscale(.5); }
-  #trash-btn:not(:disabled):active{ transform:scale(.9); }
-
-  #kitchen-divider{
-    width:2px;
-    align-self:stretch;
-    background:rgba(255,255,255,.12);
-    margin:2px 0;
-  }
-
-  #recipe-tray{
-    display:flex;
-    gap:8px;
-  }
-
-  .recipe-btn{
-    position:relative;
-    width:52px;
-    height:52px;
-    border-radius:12px;
-    border:2px solid var(--gold-dark);
-    background:linear-gradient(180deg, #f0dfa0, var(--gold));
-    font-size:1.5em;
-    cursor:pointer;
-    box-shadow:0 3px 8px var(--shadow);
-  }
-  .recipe-btn:active{ transform:scale(.94); }
-  .recipe-btn:disabled{ cursor:not-allowed; opacity:.45; filter:grayscale(.4); }
-
-  .stock-badge{
-    position:absolute;
-    bottom:-6px;
-    right:-6px;
-    min-width:18px;
-    height:18px;
-    padding:0 4px;
-    border-radius:999px;
-    background:var(--ink-dark);
-    border:1.5px solid var(--gold-dark);
-    color:var(--paper);
-    font-size:10px;
-    font-weight:800;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-  }
-  .stock-badge.low{ background:var(--plum); border-color:var(--rose); color:#fff; }
-
-  /* ---------- OVERLAYS ---------- */
-  .overlay{
-    position:absolute;
-    inset:0;
-    background:rgba(6,3,10,.78);
-    display:none;
-    align-items:center;
-    justify-content:center;
-    z-index:50;
-  }
-  .overlay.show{ display:flex; }
-
-  .panel{
-    background:linear-gradient(180deg, var(--ink-light), var(--ink-dark));
-    border:1.5px solid var(--gold-dark);
-    border-radius:16px;
-    padding:32px 36px;
-    text-align:center;
-    color:var(--paper);
-    min-width:280px;
-    box-shadow:0 10px 30px var(--shadow), inset 0 0 40px rgba(92,42,69,.25);
-  }
-
-  .panel h2{
-    margin:0 0 12px;
-    color:var(--gold);
-    font-size:23px;
-  }
-
-  .panel p{
-    margin:6px 0;
-    font-size:16px;
-  }
-
-  .panel .big-coin{
-    font-size:22px;
-    color:var(--gold);
-    font-weight:800;
-    margin:14px 0;
-  }
-
-  .game-btn{
-    margin-top:16px;
-    background:linear-gradient(180deg, var(--gold), var(--gold-dark));
-    border:none;
-    color:var(--ink-dark);
-    font-weight:800;
-    font-size:16px;
-    padding:12px 28px;
-    border-radius:10px;
-    cursor:pointer;
-    box-shadow:0 4px 10px var(--shadow);
-  }
-  .game-btn:active{ transform:translateY(1px); }
-
-  /* ---------- LOJA ---------- */
-  #shop-panel{
-    position:relative;
-    background:linear-gradient(180deg, var(--ink-light), var(--ink-dark));
-    border:1.5px solid var(--gold-dark);
-    border-radius:16px;
-    padding:24px 26px;
-    color:var(--paper);
-    width:min(420px, 90vw);
-    max-height:80vh;
-    overflow-y:auto;
-    box-shadow:0 10px 30px var(--shadow), inset 0 0 40px rgba(92,42,69,.25);
-  }
-  #shop-panel h2{
-    margin:0 0 4px;
-    color:var(--gold);
-    text-align:center;
-  }
-  #shop-panel .shop-sub{
-    text-align:center;
-    font-size:13px;
-    opacity:.8;
-    margin-bottom:16px;
-  }
-
-  #shop-close-x{
-    position:absolute;
-    top:10px;
-    right:10px;
-    width:32px;
-    height:32px;
-    border-radius:50%;
-    border:1.5px solid var(--gold-dark);
-    background:rgba(0,0,0,.35);
-    color:var(--paper);
-    font-size:16px;
-    line-height:1;
-    cursor:pointer;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-  }
-  #shop-close-x:active{ transform:scale(.92); }
-
-  .shop-item{
-    display:flex;
-    align-items:center;
-    gap:12px;
-    background:rgba(0,0,0,.28);
-    border:1px solid var(--gold-dark);
-    border-radius:12px;
-    padding:10px 12px;
-    margin-bottom:10px;
-  }
-  .shop-item .shop-icon{
-    width:42px;height:42px;
-    border-radius:10px;
-    background:linear-gradient(180deg, #f0dfa0, var(--gold));
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-size:1.4em;
-    flex-shrink:0;
-  }
-  .shop-item .shop-info{
-    flex:1;
-    text-align:left;
-  }
-  .shop-item .shop-info .shop-name{
-    font-weight:700;
-    font-size:15px;
-  }
-  .shop-item .shop-info .shop-desc{
-    font-size:12px;
-    opacity:.75;
-  }
-  .shop-buy-btn{
-    background:linear-gradient(180deg, var(--gold), var(--gold-dark));
-    border:none;
-    color:var(--ink-dark);
-    font-weight:800;
-    font-size:13px;
-    padding:8px 12px;
-    border-radius:8px;
-    cursor:pointer;
-    flex-shrink:0;
-    white-space:nowrap;
-  }
-  .shop-buy-btn:disabled{
-    background:#4a4453;
-    color:#a79db3;
-    cursor:not-allowed;
-  }
-  .shop-buy-btn.secondary{
-    background:linear-gradient(180deg, var(--ink-light), var(--ink));
-    color:var(--paper);
-    border:1px solid var(--gold-dark);
-  }
-
-  #shop-close-btn{
-    display:block;
-    margin:14px auto 0;
-  }
-
-  #reset-save-link{
-    text-align:center;
-    margin-top:14px;
-    font-size:11px;
-    color:#a79db3;
-    text-decoration:underline;
-    cursor:pointer;
-    opacity:.75;
-  }
-  #reset-save-link:hover{ opacity:1; color:var(--rose); }
-
-  .toast{
-    position:absolute;
-    bottom:90px;
-    left:50%;
-    transform:translateX(-50%);
-    background:rgba(20,10,20,.9);
-    border:1px solid var(--gold-dark);
-    color:var(--paper);
-    padding:8px 18px;
-    border-radius:999px;
-    font-size:14px;
-    z-index:30;
-    opacity:0;
-    pointer-events:none;
-    transition:opacity .3s;
-    white-space:nowrap;
-  }
-  .toast.show{ opacity:1; }
-
-  /* ---------- PAINEL DE DIAGNÓSTICO ---------- */
-  #debug-panel{
-    position:fixed;
-    left:10px;
-    bottom:10px;
-    max-width:min(92vw, 480px);
-    max-height:40vh;
-    overflow:auto;
-    background:rgba(20,4,4,.92);
-    border:2px solid #ff6b6b;
-    color:#ffe2e2;
-    font:12px/1.5 monospace;
-    padding:10px 12px;
-    border-radius:8px;
-    z-index:9999;
-    display:none;
-    white-space:pre-wrap;
-  }
-  #debug-panel.show{ display:block; }
-  #debug-panel strong{ color:#ff9d9d; }
-</style>
+        /* Oculta os botões touch em telas grandes (PCs/Notebooks) */
+        @media (min-width: 801px) {
+            #touchControls {
+                display: none;
+            }
+        }
+    </style>
 </head>
 <body>
 
