@@ -47,12 +47,23 @@
     position:relative;
     width:100vw;
     height:100vh;
-    background:
-      url('background.png') center center / cover no-repeat,
-      linear-gradient(160deg, #241a30, #0f0a16);
+    overflow:hidden;
+    background:linear-gradient(160deg, #241a30, #0f0a16);
     display:flex;
     flex-direction:column;
     justify-content:flex-end;
+  }
+
+  /* camada de fundo isolada: se move um pouco menos que o resto ao mexer o mouse/dedo,
+     criando a sensação de profundidade (paralaxe) sem precisar de modelos 3D reais */
+  #bg-parallax{
+    position:absolute;
+    inset:-4%;
+    background:
+      url('background.png') center center / cover no-repeat,
+      linear-gradient(160deg, #241a30, #0f0a16);
+    will-change:transform;
+    transition:transform .18s ease-out;
   }
 
   #game::after{
@@ -61,6 +72,7 @@
     inset:0;
     pointer-events:none;
     background:radial-gradient(ellipse at center, rgba(20,10,25,0) 52%, rgba(10,4,14,.68) 100%);
+    z-index:5;
   }
 
   /* ---------- TELA DE CARREGAMENTO ---------- */
@@ -165,7 +177,7 @@
     box-shadow:0 4px 10px var(--shadow);
     transition:transform .1s;
   }
-  .icon-btn:active{ transform:scale(.92); }
+  .icon-btn:active{ transform:perspective(300px) rotateX(20deg) scale(.92); }
 
   /* ---------- BARRA DE EXPEDIENTE ---------- */
   #shift-bar-wrap{
@@ -209,6 +221,8 @@
     position:absolute;
     inset:0;
     z-index:10;
+    will-change:transform;
+    transition:transform .18s ease-out;
   }
 
   .table-spot{
@@ -236,7 +250,8 @@
     box-shadow:0 0 18px rgba(227,169,192,.75), 0 6px 12px var(--shadow);
     animation:pop .25s ease-out;
     overflow:visible;
-    transition:box-shadow .2s;
+    transition:box-shadow .2s, transform .18s ease-out;
+    will-change:transform;
   }
   .customer.show{ display:flex; }
 
@@ -360,7 +375,7 @@
     box-shadow:0 3px 8px var(--shadow);
   }
   #trash-btn:disabled{ opacity:.35; cursor:not-allowed; filter:grayscale(.5); }
-  #trash-btn:not(:disabled):active{ transform:scale(.9); }
+  #trash-btn:not(:disabled):active{ transform:perspective(300px) rotateX(22deg) scale(.9); }
 
   #kitchen-divider{
     width:2px;
@@ -385,7 +400,7 @@
     cursor:pointer;
     box-shadow:0 3px 8px var(--shadow);
   }
-  .recipe-btn:active{ transform:scale(.94); }
+  .recipe-btn:active{ transform:perspective(300px) rotateX(22deg) scale(.94); }
   .recipe-btn:disabled{ cursor:not-allowed; opacity:.45; filter:grayscale(.4); }
 
   .stock-badge{
@@ -412,12 +427,31 @@
     position:absolute;
     inset:0;
     background:rgba(6,3,10,.78);
-    display:none;
+    display:flex;
     align-items:center;
     justify-content:center;
     z-index:50;
+    perspective:1000px;
+    visibility:hidden;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .25s ease, visibility .25s;
   }
-  .overlay.show{ display:flex; }
+  .overlay.show{
+    visibility:visible;
+    opacity:1;
+    pointer-events:auto;
+  }
+
+  /* os painéis "abrem" com uma virada 3D, como uma tampa ou cardápio caindo pra frente */
+  .panel, #shop-panel{
+    transform:perspective(1000px) rotateX(-90deg);
+    transform-origin:top center;
+    transition:transform .4s cubic-bezier(.2,.9,.25,1);
+  }
+  .overlay.show .panel, .overlay.show #shop-panel{
+    transform:perspective(1000px) rotateX(0deg);
+  }
 
   .panel{
     background:linear-gradient(180deg, var(--ink-light), var(--ink-dark));
@@ -631,6 +665,8 @@
 <audio id="bg-music" src="bg-music.mp3" loop preload="auto"></audio>
 
 <div id="game">
+
+  <div id="bg-parallax"></div>
 
   <!-- HUD -->
   <div id="hud-top">
@@ -1405,9 +1441,49 @@ function clearSave(){
   if (hadSave) showToast(`Bem-vinda de volta! Continuando no Dia ${state.day}.`);
   requestAnimationFrame(loop);
 
+  // ---------------- PROFUNDIDADE 2.5D (paralaxe + tilt) ----------------
+  // Move o fundo e as mesas em direções/intensidades diferentes conforme o
+  // cursor (ou o dedo) se move, criando sensação de profundidade sem 3D real.
+  const bgParallax = document.getElementById('bg-parallax');
+  const tablesLayer = document.getElementById('tables-layer');
+
+  function applyParallax(nx, ny){
+    // nx, ny vão de -0.5 a 0.5 (posição relativa ao centro da tela)
+    bgParallax.style.transform = `translate(${nx * -14}px, ${ny * -10}px) scale(1.03)`;
+    tablesLayer.style.transform = `translate(${nx * 22}px, ${ny * 14}px)`;
+  }
+
+  window.addEventListener('mousemove', (e) => {
+    const nx = e.clientX / window.innerWidth - 0.5;
+    const ny = e.clientY / window.innerHeight - 0.5;
+    applyParallax(nx, ny);
+  });
+
+  window.addEventListener('touchmove', (e) => {
+    if (!e.touches || !e.touches[0]) return;
+    const nx = e.touches[0].clientX / window.innerWidth - 0.5;
+    const ny = e.touches[0].clientY / window.innerHeight - 0.5;
+    applyParallax(nx, ny);
+  }, { passive:true });
+
+  // tilt 3D individual em cada cliente ao passar o cursor por cima
+  tables.forEach(t => {
+    const spot = t.el.parentElement; // .table-spot
+    spot.addEventListener('mousemove', (e) => {
+      const rect = spot.getBoundingClientRect();
+      const px = (e.clientX - rect.left) / rect.width - 0.5;   // -0.5 a 0.5
+      const py = (e.clientY - rect.top) / rect.height - 0.5;
+      t.el.style.transform = `perspective(400px) rotateX(${py * -18}deg) rotateY(${px * 18}deg) scale(1.04)`;
+    });
+    spot.addEventListener('mouseleave', () => {
+      t.el.style.transform = '';
+    });
+  });
+
   // já chega gente logo de cara, em vez de deixar o salão vazio esperando o primeiro intervalo
   trySpawnCustomer();
   setTimeout(trySpawnCustomer, 500);
+
 
   // tenta tocar a música de fundo; navegadores bloqueiam autoplay com som,
   // então se falhar, começa a tocar no primeiro clique do jogador
