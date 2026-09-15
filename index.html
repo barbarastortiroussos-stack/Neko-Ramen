@@ -1,9 +1,37 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Izakaya no Entardecer</title>
+
+<!-- GameDistribution SDK: must load before the game starts. Only loaded once. -->
+<script>
+window["GD_OPTIONS"] = {
+    "gameId": "ff448753e65d49daba911317d15052b6",
+    "onEvent": function(event) {
+        switch (event.name) {
+            case "SDK_GAME_START":
+                // ad is done: resume game logic and unmute audio
+                if (window.__gdResumeGame) window.__gdResumeGame();
+                break;
+            case "SDK_GAME_PAUSE":
+                // ad is about to show: pause game logic and mute audio
+                if (window.__gdPauseGame) window.__gdPauseGame();
+                break;
+        }
+    },
+};
+(function(d, s, id) {
+    var js, fjs = d.getElementsByTagName(s)[0];
+    if (d.getElementById(id)) return;
+    js = d.createElement(s);
+    js.id = id;
+    js.src = 'https://html5.api.gamedistribution.com/main.min.js';
+    fjs.parentNode.insertBefore(js, fjs);
+}(document, 'script', 'gamedistribution-jssdk'));
+</script>
+
 <style>
   :root{
     --ink-dark:#140f1c;
@@ -658,7 +686,7 @@
 <div id="tela-loading">
   <h1 class="serif-title">Izakaya no Entardecer</h1>
   <div id="barra-container"><div id="barra-progresso"></div></div>
-  <p id="texto-carregando">Preparando o salão... 0%</p>
+  <p id="texto-carregando">Preparing the dining room... 0%</p>
 </div>
 
 <!-- MÚSICA DE FUNDO EM LOOP (opcional — some silenciosamente se o arquivo não existir) -->
@@ -675,14 +703,14 @@
         <span class="coin-icon"></span>
         <span id="coin-count">0</span>
       </div>
-      <button class="icon-btn" id="shop-btn" title="Loja">🏮</button>
-      <button class="icon-btn" id="sound-btn" title="Som">🔊</button>
+      <button class="icon-btn" id="shop-btn" title="Shop">🏮</button>
+      <button class="icon-btn" id="sound-btn" title="Sound">🔊</button>
     </div>
-    <button class="icon-btn" id="pause-btn" title="Pausar">⏸</button>
+    <button class="icon-btn" id="pause-btn" title="Pause">⏸</button>
   </div>
 
   <div id="shift-bar-wrap">
-    <div id="shift-label">DIA <span id="day-count">1</span> — EXPEDIENTE</div>
+    <div id="shift-label">DAY <span id="day-count">1</span> — SHIFT</div>
     <div id="shift-track"><div id="shift-fill"></div></div>
   </div>
 
@@ -690,19 +718,19 @@
   <div id="tables-layer">
     <div class="table-spot t1"><div class="customer" id="c1">
       <div class="patience-ring"></div>
-      <img class="customer-sprite" alt="Cliente">
+      <img class="customer-sprite" alt="Customer">
       <span class="customer-fallback-emoji">🐾</span>
       <div class="order-bubble"></div>
     </div></div>
     <div class="table-spot t2"><div class="customer" id="c2">
       <div class="patience-ring"></div>
-      <img class="customer-sprite" alt="Cliente">
+      <img class="customer-sprite" alt="Customer">
       <span class="customer-fallback-emoji">🐾</span>
       <div class="order-bubble"></div>
     </div></div>
     <div class="table-spot t3"><div class="customer" id="c3">
       <div class="patience-ring"></div>
-      <img class="customer-sprite" alt="Cliente">
+      <img class="customer-sprite" alt="Customer">
       <span class="customer-fallback-emoji">🐾</span>
       <div class="order-bubble"></div>
     </div></div>
@@ -710,42 +738,42 @@
 
   <div class="toast" id="toast"></div>
 
-  <!-- despensa: pegue um item do estoque e entregue na mesa certa -->
+  <!-- pantry: grab an item from stock and deliver it to the right table -->
   <div id="kitchen-bar">
-    <div id="carrying-slot" title="Prato na mão">—</div>
-    <button id="trash-btn" title="Descartar prato errado" disabled>🗑️</button>
+    <div id="carrying-slot" title="Dish in hand">—</div>
+    <button id="trash-btn" title="Discard wrong dish" disabled>🗑️</button>
     <div id="kitchen-divider"></div>
     <div id="recipe-tray"></div>
   </div>
 
-  <!-- overlay de pause -->
+  <!-- pause overlay -->
   <div class="overlay" id="pause-overlay">
     <div class="panel">
-      <h2 class="serif-title">Jogo Pausado</h2>
-      <p>Respire um pouco antes de voltar ao balcão.</p>
-      <button class="game-btn" id="resume-btn">Continuar</button>
+      <h2 class="serif-title">Game Paused</h2>
+      <p>Take a breath before heading back to the counter.</p>
+      <button class="game-btn" id="resume-btn">Resume</button>
     </div>
   </div>
 
-  <!-- overlay fim de expediente -->
+  <!-- end of shift overlay -->
   <div class="overlay" id="endday-overlay">
     <div class="panel">
-      <h2 class="serif-title">Fim do Expediente</h2>
-      <p id="endday-summary">Você atendeu os clientes do Dia 1.</p>
-      <div class="big-coin">+<span id="endday-coins">0</span> moedas hoje</div>
-      <button class="game-btn" id="nextday-btn">Começar Dia 2</button>
+      <h2 class="serif-title">Shift Over</h2>
+      <p id="endday-summary">You served customers on Day 1.</p>
+      <div class="big-coin">+<span id="endday-coins">0</span> coins today</div>
+      <button class="game-btn" id="nextday-btn">Start Day 2</button>
     </div>
   </div>
 
-  <!-- overlay da loja -->
+  <!-- shop overlay -->
   <div class="overlay" id="shop-overlay">
     <div id="shop-panel">
-      <button id="shop-close-x" title="Fechar">✕</button>
-      <h2 class="serif-title">Lojinha do Izakaya</h2>
-      <div class="shop-sub">Desbloqueie receitas e reponha o estoque</div>
+      <button id="shop-close-x" title="Close">✕</button>
+      <h2 class="serif-title">Izakaya Shop</h2>
+      <div class="shop-sub">Unlock recipes and restock your pantry</div>
       <div id="shop-list"></div>
-      <button class="game-btn" id="shop-close-btn">Fechar</button>
-      <div id="reset-save-link">Apagar progresso salvo</div>
+      <button class="game-btn" id="shop-close-btn">Close</button>
+      <div id="reset-save-link">Erase saved progress</div>
     </div>
   </div>
 
@@ -791,7 +819,7 @@ window.addEventListener('error', function(e){
     const intervalo = setInterval(() => {
       progresso = Math.min(100, progresso + Math.floor(Math.random() * 18) + 8);
       if (barra) barra.style.width = progresso + '%';
-      if (texto) texto.textContent = `Preparando o salão... ${progresso}%`;
+      if (texto) texto.textContent = `Preparing the dining room... ${progresso}%`;
       if (progresso >= 100) esconder();
     }, 90);
 
@@ -825,8 +853,8 @@ const ASSETS = {
 function checkImage(path){
   const img = new Image();
   img.onerror = () => DebugPanel.log(
-    `<strong>Imagem não encontrada:</strong> "${path}" — confira maiúsculas/minúsculas, ` +
-    `espaços no nome e se o arquivo está mesmo nessa pasta no repositório.`
+    `<strong>Image not found:</strong> "${path}" — check uppercase/lowercase letters, ` +
+    `spaces in the name, and whether the file is really in that folder in the repository.`
   );
   img.src = path;
 }
@@ -837,8 +865,8 @@ const bgMusic = document.getElementById('bg-music');
 bgMusic.volume = 0.35;
 bgMusic.addEventListener('error', () => {
   DebugPanel.log(
-    `<strong>Música não encontrada:</strong> "bg-music.mp3" — se quiser música de fundo, ` +
-    `envie um arquivo com esse nome pra raiz do repositório. Sem ele, o jogo funciona normalmente, só sem música.`
+    `<strong>Music not found:</strong> "bg-music.mp3" — if you want background music, ` +
+    `upload a file with that exact name to the root of the repository. Without it, the game works normally, just without music.`
   );
 });
 
@@ -852,7 +880,7 @@ bgMusic.addEventListener('error', () => {
 const STOCK_PACK_SIZE = 10;
 
 const RECIPES = [
-  { id:'sake',     name:'Sakê',     emoji:'🍶', price:0,   restockPrice:12, reward:[5,9],   unlocked:true,  stock:10 },
+  { id:'sake',     name:'Sake',     emoji:'🍶', price:0,   restockPrice:12, reward:[5,9],   unlocked:true,  stock:10 },
   { id:'ramen',    name:'Ramen',    emoji:'🍜', price:0,   restockPrice:18, reward:[8,13],  unlocked:true,  stock:10 },
   { id:'onigiri',  name:'Onigiri',  emoji:'🍙', price:30,  restockPrice:22, reward:[10,16], unlocked:false, stock:0  },
   { id:'sushi',    name:'Sushi',    emoji:'🍣', price:60,  restockPrice:35, reward:[14,22], unlocked:false, stock:0  },
@@ -861,11 +889,11 @@ const RECIPES = [
 ];
 
 const UPGRADES = [
-  { id:'patience1', name:'Sino da Paciência', emoji:'🔔', price:50,
-    desc:'Clientes esperam mais tempo', unlocked:false,
+  { id:'patience1', name:'Patience Bell', emoji:'🔔', price:50,
+    desc:'Customers wait longer', unlocked:false,
     apply(state){ state.patienceTime += 4; } },
-  { id:'spawn1', name:'Fama do Izakaya', emoji:'🎏', price:80,
-    desc:'Clientes chegam com mais frequência', unlocked:false,
+  { id:'spawn1', name:"Izakaya's Fame", emoji:'🎏', price:80,
+    desc:'Customers arrive more often', unlocked:false,
     apply(state){ state.spawnInterval = Math.max(0.7, state.spawnInterval - 0.5); } },
 ];
 
@@ -942,7 +970,7 @@ function saveGame(state){
     };
     localStorage.setItem(SAVE_KEY, JSON.stringify(data));
   } catch(e){
-    DebugPanel.log(`<strong>Aviso:</strong> não foi possível salvar o progresso (${e.message}).`);
+    DebugPanel.log(`<strong>Warning:</strong> couldn't save progress (${e.message}).`);
   }
 }
 
@@ -975,7 +1003,7 @@ function loadGame(state){
     }
     return true;
   } catch(e){
-    DebugPanel.log(`<strong>Aviso:</strong> não foi possível carregar o progresso salvo (${e.message}).`);
+    DebugPanel.log(`<strong>Warning:</strong> couldn't load saved progress (${e.message}).`);
     return false;
   }
 }
@@ -1120,19 +1148,19 @@ function clearSave(){
     state.carrying = null;
     updateCarryingUI();
     SFX.trash();
-    showToast('Prato descartado na lixeira.');
+    showToast('Dish thrown in the trash.');
     saveGame(state);
   }
   trashBtn.addEventListener('click', discardCarrying);
 
   function pickFromStock(recipeId){
     if (state.carrying){
-      showToast('Entregue o prato que já está na mão antes de pegar outro.');
+      showToast('Deliver the dish you\'re already holding before grabbing another.');
       return;
     }
     const recipe = recipeById(recipeId);
     if (!recipe || recipe.stock <= 0){
-      showToast('Estoque zerado! Reponha na lojinha 🏮.');
+      showToast('Out of stock! Restock at the shop 🏮.');
       return;
     }
     recipe.stock -= 1;
@@ -1172,11 +1200,11 @@ function clearSave(){
 
   function deliverTo(t){
     if (!t.occupied){
-      if (state.carrying) showToast('Não tem ninguém nessa mesa.');
+      if (state.carrying) showToast('There\'s no one at that table.');
       return;
     }
     if (!state.carrying){
-      showToast('Pegue um prato na despensa antes de atender!');
+      showToast('Grab a dish from the pantry before serving!');
       return;
     }
 
@@ -1189,7 +1217,7 @@ function clearSave(){
       SFX.success();
     } else {
       reward = 1 + Math.floor(Math.random() * 2);
-      showToast('Isso não era o que esse cliente pediu... ele aceitou por educação.');
+      showToast('That wasn\'t what this customer ordered... they accepted it to be polite.');
       SFX.miss();
     }
 
@@ -1211,7 +1239,7 @@ function clearSave(){
     t.occupied = false;
     t.orderId = null;
     t.el.classList.remove('show', 'match-highlight');
-    showToast('Um cliente foi embora sem ser atendido...');
+    showToast('A customer left without being served...');
     SFX.leave();
   }
 
@@ -1233,7 +1261,7 @@ function clearSave(){
           <div class="shop-icon">${r.emoji}</div>
           <div class="shop-info">
             <div class="shop-name">${r.name}</div>
-            <div class="shop-desc">Nova receita — vem com ${STOCK_PACK_SIZE} no estoque</div>
+            <div class="shop-desc">New recipe — comes with ${STOCK_PACK_SIZE} in stock</div>
           </div>
           <button class="shop-buy-btn">${r.price} 🪙</button>
         `;
@@ -1247,7 +1275,7 @@ function clearSave(){
           updateCoinsUI();
           renderRecipeTray();
           renderShop();
-          showToast(`${r.name} adicionado ao cardápio!`);
+          showToast(`${r.name} added to the menu!`);
           SFX.buy();
           saveGame(state);
         });
@@ -1256,9 +1284,9 @@ function clearSave(){
           <div class="shop-icon">${r.emoji}</div>
           <div class="shop-info">
             <div class="shop-name">${r.name}</div>
-            <div class="shop-desc">Estoque atual: <span class="stock-count">${r.stock}</span></div>
+            <div class="shop-desc">Current stock: <span class="stock-count">${r.stock}</span></div>
           </div>
-          <button class="shop-buy-btn secondary">+${STOCK_PACK_SIZE} por ${r.restockPrice} 🪙</button>
+          <button class="shop-buy-btn secondary">+${STOCK_PACK_SIZE} for ${r.restockPrice} 🪙</button>
         `;
         const buyBtn = row.querySelector('.shop-buy-btn');
         buyBtn.disabled = state.coins < r.restockPrice;
@@ -1269,7 +1297,7 @@ function clearSave(){
           updateCoinsUI();
           refreshTrayStock();
           renderShop();
-          showToast(`+${STOCK_PACK_SIZE} de ${r.name} no estoque!`);
+          showToast(`+${STOCK_PACK_SIZE} ${r.name} added to stock!`);
           SFX.buy();
           saveGame(state);
         });
@@ -1287,7 +1315,7 @@ function clearSave(){
           <div class="shop-name">${u.name}</div>
           <div class="shop-desc">${u.desc}</div>
         </div>
-        <button class="shop-buy-btn">${u.unlocked ? 'Comprado ✓' : u.price + ' 🪙'}</button>
+        <button class="shop-buy-btn">${u.unlocked ? 'Owned ✓' : u.price + ' 🪙'}</button>
       `;
       const buyBtn = row.querySelector('.shop-buy-btn');
       buyBtn.disabled = u.unlocked || state.coins < u.price;
@@ -1298,7 +1326,7 @@ function clearSave(){
         u.apply(state);
         updateCoinsUI();
         renderShop();
-        showToast(`${u.name} aplicado!`);
+        showToast(`${u.name} applied!`);
         SFX.buy();
         saveGame(state);
       });
@@ -1336,7 +1364,7 @@ function clearSave(){
   });
 
   resetSaveLink.addEventListener('click', () => {
-    if (confirm('Isso vai apagar todo o progresso salvo (moedas, dia, receitas, estoque). Tem certeza?')){
+    if (confirm('This will erase all saved progress (coins, day, recipes, stock). Are you sure?')){
       clearSave();
       location.reload();
     }
@@ -1348,6 +1376,18 @@ function clearSave(){
     pauseOverlay.classList.toggle('show', v);
     pauseBtn.textContent = v ? '▶' : '⏸';
   }
+
+  // GameDistribution SDK hooks: called when an ad is about to show / has finished.
+  // These pause game logic and mute audio WITHOUT showing our own pause panel,
+  // since the ad itself covers the screen.
+  window.__gdPauseGame = function(){
+    state.paused = true;
+    bgMusic.pause();
+  };
+  window.__gdResumeGame = function(){
+    state.paused = false;
+    if (SFX.isEnabled()) bgMusic.play().catch(() => {});
+  };
 
   pauseBtn.addEventListener('click', () => { SFX.click(); setPaused(!state.paused); });
   resumeBtn.addEventListener('click', () => { SFX.click(); setPaused(false); });
@@ -1365,8 +1405,9 @@ function clearSave(){
     tables.forEach(t => { t.occupied = false; t.orderId = null; t.el.classList.remove('show','match-highlight'); });
     state.carrying = null;
     updateCarryingUI();
-    enddaySummary.textContent = `Você atendeu clientes durante o Dia ${state.day}.`;
+    enddaySummary.textContent = `You served customers during Day ${state.day}.`;
     enddayCoins.textContent = state.coinsToday;
+    nextdayBtn.textContent = `Start Day ${state.day + 1}`;
     enddayOverlay.classList.add('show');
     SFX.dayEnd();
     saveGame(state);
@@ -1382,6 +1423,11 @@ function clearSave(){
     saveGame(state);
     trySpawnCustomer();
     setTimeout(trySpawnCustomer, 500);
+
+    // mid-roll ad: natural break between shifts, doesn't interrupt gameplay itself
+    if (typeof gdsdk !== 'undefined' && typeof gdsdk.showAd !== 'undefined'){
+      gdsdk.showAd();
+    }
   });
 
   // ---------------- LOOP PRINCIPAL ----------------
@@ -1438,7 +1484,7 @@ function clearSave(){
   updateCarryingUI();
   updateCoinsUI();
   updateShiftUI();
-  if (hadSave) showToast(`Bem-vinda de volta! Continuando no Dia ${state.day}.`);
+  if (hadSave) showToast(`Welcome back! Continuing on Day ${state.day}.`);
   requestAnimationFrame(loop);
 
   // ---------------- PROFUNDIDADE 2.5D (paralaxe + tilt) ----------------
